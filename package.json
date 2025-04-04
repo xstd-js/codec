@@ -1,6 +1,6 @@
 {
   "name": "@xstd/codec",
-  "version": "0.0.1",
+  "version": "0.5.0",
   "type": "module",
   "main": "./index.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "fb:rc": "node fabrique/actions/cli/build-and-publish.cli.js --mode rc"
   },
   "description": "Encoder and Decoder implementations",
-  "keywords": [],
+  "keywords": ["encoder", "decoder"],
   "author": "Valentin Richard",
   "license": "MIT",
   "access": "public",

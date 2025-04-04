@@ -24,4 +24,4 @@ npm install @xstd/codec --save
 
 ## 📜 Documentation
 
-TODO
+https://xstd-js.github.io/codec

@@ -3,7 +3,7 @@ import { ROOT_PATH } from '../constants/root-path.constant.js';
 import { cmd } from '../helpers/cmd.js';
 
 /**
- * Published the lib.
+ * Publishes the lib.
  * @param {{ mode?: 'dev' | 'rc' | 'prod'; }} options
  * @return {Promise<void>}
  */
