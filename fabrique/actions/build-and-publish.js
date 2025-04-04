@@ -10,5 +10,8 @@ import { publish } from './publish.js';
 export async function buildAndPublish(options) {
   await build(options);
   await publish(options);
-  await gitTag(options);
+
+  if (options.mode === 'prod') {
+    await gitTag();
+  }
 }

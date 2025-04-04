@@ -5,14 +5,9 @@ import { cmd } from '../helpers/cmd.js';
 
 /**
  * Git tag and push
- * @param {{ mode?: 'dev' | 'rc' | 'prod'; }} options
  * @return {Promise<void>}
  */
-export async function gitTag({ mode = 'prod' } = {}) {
-  if (mode !== 'prod') {
-    return;
-  }
-
+export async function gitTag() {
   const packageJsonPath = join(ROOT_PATH, 'package.json');
 
   const version = JSON.parse(
@@ -26,7 +21,7 @@ export async function gitTag({ mode = 'prod' } = {}) {
   await cmd('git', ['tag', '-a', `v${version}`, '-m', `release v${version}`], {
     cwd: resolve(ROOT_PATH),
   });
-  await cmd('git', ['push'], { cwd: resolve(ROOT_PATH) });
+  await cmd('git', ['push', '--tags'], { cwd: resolve(ROOT_PATH) });
 
   console.log('Tag published with success !');
 }

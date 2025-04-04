@@ -15,7 +15,10 @@
     "fb:rc": "node fabrique/actions/cli/build-and-publish.cli.js --mode rc"
   },
   "description": "Encoder and Decoder implementations",
-  "keywords": ["encoder", "decoder"],
+  "keywords": [
+    "encoder",
+    "decoder"
+  ],
   "author": "Valentin Richard",
   "license": "MIT",
   "access": "public",
@@ -24,7 +27,7 @@
     "url": "git+https://github.com/xstd-js/codec.git"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
+    "@types/node": "^22.14.0",
     "@vitest/coverage-istanbul": "^3.1.1",
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
@@ -32,9 +35,9 @@
     "typescript": "5.8.2",
     "vitest": "^3.1.1"
   },
-  "packageManager": "yarn@4.7.0",
+  "packageManager": "yarn@4.8.1",
   "fabrique": {
-    "version": "0.3.4",
+    "version": "0.3.5",
     "type": "lib"
   }
 }
