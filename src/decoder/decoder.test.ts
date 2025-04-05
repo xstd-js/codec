@@ -48,7 +48,7 @@ describe('Decoder', () => {
   describe('methods', () => {
     test('#consume', () => {
       const decoder = new Decoder(new Uint8Array([0x05]));
-      expect(decoder.size).toBe(1);
+      expect(decoder.length).toBe(1);
       expect(decoder.consumed).toBe(0);
       expect(decoder.remaining).toBe(1);
       expect(decoder.done).toBe(false);

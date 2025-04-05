@@ -83,7 +83,7 @@ export class Decoder {
   /**
    * Returns the total number of bytes.
    */
-  get size(): number {
+  get length(): number {
     return this.#bytes.length;
   }
 

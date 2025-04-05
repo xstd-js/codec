@@ -111,9 +111,9 @@ export class Encoder {
   }
 
   /**
-   * Returns the current number of allocated bytes.
+   * Returns the current number of written bytes.
    */
-  get allocated(): number {
+  get length(): number {
     return this.#cursor;
   }
 
