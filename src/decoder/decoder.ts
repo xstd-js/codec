@@ -22,13 +22,13 @@ import {
  */
 export class Decoder {
   /**
-   * Creates a new `Decoder` from some `bytes`, and immediately calls the `consume` function with this Decoder.
+   * Creates a new `Decoder` from some `bytes`, and immediately calls the `decode` function with this Decoder as argument.
    *
-   * Then is the `Decoder` is `done`, it returns the returned value of `consume(...)`, else an `Error` is thrown.
+   * Then if the `Decoder` is `done`, it returns the returned value of `decode(...)`, else an `Error` is thrown.
    */
-  static decode<GReturn>(bytes: Uint8Array, consume: (decoder: Decoder) => GReturn): GReturn {
+  static decode<GReturn>(bytes: Uint8Array, decode: (decoder: Decoder) => GReturn): GReturn {
     const decoder: Decoder = new Decoder(bytes);
-    const result: GReturn = consume(decoder);
+    const result: GReturn = decode(decoder);
     if (!decoder.done) {
       throw new Error(`${decoder.remaining} bytes remaining.`);
     }
@@ -209,9 +209,9 @@ export class Decoder {
 
   #float16(littleEndian: boolean): number {
     /* istanbul ignore if -- @preserve */
-    /* istanbul ignore else -- @preserve */
     if (this.#view.setFloat16 === undefined) {
       return get_float_16(this.#view, this.#consume(2), littleEndian);
+      /* istanbul ignore else -- @preserve */
     } else {
       return this.#view.getFloat16(this.#consume(2), littleEndian);
     }

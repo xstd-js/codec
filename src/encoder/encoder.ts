@@ -1,4 +1,5 @@
 import { set_float_16 } from '../functions.private/set_float_16.js';
+import { EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
 
 /**
@@ -52,6 +53,31 @@ export interface EncoderOptions {
  * ```
  */
 export class Encoder {
+  /**
+   * Creates a new `Encoder` and immediately calls the `encode` function with this Encoder and the provided value as arguments.
+   *
+   * Then, it returns the resulting Uint8Array containing the encoded value.
+   *
+   * @example:
+   *
+   * ```ts
+   * function encodeBinaryString(encoder: Encoder, input: string): void {
+   *   encoder
+   *     .int16LE(input)
+   *     .string(input, { encoding: 'binary' });
+   * }
+   *
+   * const bytes = Encoder.encode('abc', encodeBinaryString);
+   * ```
+   */
+  static encode<GValue>(
+    value: GValue,
+    encode: EncodeFunction<GValue>,
+    options?: EncoderOptions,
+  ): Uint8Array {
+    return new Encoder(options).encode(value, encode).toUint8Array();
+  }
+
   readonly #resizeFactor: number;
 
   // the raw buffer containing the bytes.
@@ -66,7 +92,7 @@ export class Encoder {
   constructor({
     initialByteLength = 0x100,
     resizeFactor = 1,
-    maxByteLength = 32,
+    maxByteLength = 0x100000000,
   }: EncoderOptions = {}) {
     initialByteLength = Math.max(0, Math.min(0x100000000, Math.floor(initialByteLength)));
     resizeFactor = 1 << Math.max(1, Math.min(4, Math.floor(resizeFactor)));
@@ -130,9 +156,9 @@ export class Encoder {
    */
 
   /**
-   * Calls the function `apply` with `this` as first and only argument.
+   * Calls the function `encode` with `this` and `value` as arguments.
    *
-   * > **INFO:** this is useful to _apply_ an `encode` function to this Encoder.
+   * > **INFO:** this is useful to encode a value in this Encoder based on an external function.
    *
    * @example:
    *
@@ -144,13 +170,13 @@ export class Encoder {
    * }
    *
    * const bytes = new Encoder()
-   *  .apply((encoder: Encoder) => encodeBinaryString(encoder, 'abc')))
+   *  .encode('abc', encodeBinaryString)
    *  // other operations...
    *  .toUint8Array();
    * ```
    */
-  apply(apply: (encoder: this) => void): this {
-    apply(this);
+  encode<GValue>(value: GValue, encode: EncodeFunction<GValue>): this {
+    encode(this, value);
     return this;
   }
 
@@ -261,9 +287,9 @@ export class Encoder {
 
   #float16(value: number, littleEndian: boolean): this {
     /* istanbul ignore if -- @preserve */
-    /* istanbul ignore else -- @preserve */
     if (this.#view.setFloat16 === undefined) {
       set_float_16(this.#view, this.#alloc(2), value, littleEndian);
+      /* istanbul ignore else -- @preserve */
     } else {
       this.#view.setFloat16(this.#alloc(2), value, littleEndian);
     }
@@ -439,5 +465,25 @@ export class Encoder {
     space?: string | number,
   ): this {
     return this.string(JSON.stringify(value, replacer, space));
+  }
+
+  /**
+   * Iterates on `values` and calls the `encode` function with `this` and each individual values.
+   *
+   * @example:
+   *
+   * ```ts
+   * const bytes = new Encoder()
+   *   .iterable([1, 2, 3], (encoder: Encoder, value: number): void => {
+   *     encoder.uint16BE(value);
+   *   })
+   *   .toUint8Array();
+   * ```
+   */
+  iterable<GValue>(values: Iterable<GValue>, encode: EncodeFunction<GValue>): this {
+    for (const value of values) {
+      encode(this, value);
+    }
+    return this;
   }
 }

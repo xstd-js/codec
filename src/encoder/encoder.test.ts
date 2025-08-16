@@ -13,9 +13,39 @@ describe('Encoder', () => {
     expect(bytes).toEqual(new Uint8Array([3, 0, 97, 98, 99]));
   });
 
+  describe('static methods', () => {
+    describe('encode', () => {
+      it('should be able to encode a binary string', () => {
+        expect(
+          Encoder.encode('abc', (encoder: Encoder, str: string): void => {
+            encoder
+              .int16LE(str.length) // encodes the string's length
+              .string(str, { encoding: 'binary' }); // encodes the string as binary
+          }),
+        ).toEqual(new Uint8Array([3, 0, 97, 98, 99]));
+      });
+    });
+  });
+
   describe('methods', () => {
-    test('#alloc', () => {
-      {
+    describe('#alloc', () => {
+      test('is internally resizeable', () => {
+        const encoder = new Encoder({ initialByteLength: 1, maxByteLength: 2 });
+        expect(encoder.length).toBe(0);
+
+        // append
+        encoder.uint8(1);
+        expect(encoder.length).toBe(1);
+
+        // grow
+        encoder.uint8(2);
+        expect(encoder.length).toBe(2);
+
+        // excess limit
+        expect(() => encoder.uint8(3)).toThrow();
+      });
+
+      test('support initialByteLength=0', () => {
         const encoder = new Encoder({ initialByteLength: 0, maxByteLength: 1 });
         expect(encoder.length).toBe(0);
 
@@ -25,32 +55,22 @@ describe('Encoder', () => {
 
         // excess limit
         expect(() => encoder.uint8(2)).toThrow();
-      }
-
-      {
-        const encoder = new Encoder({ initialByteLength: 1, maxByteLength: 2 });
-        expect(encoder.length).toBe(0);
-
-        encoder.uint8(1);
-        encoder.uint8(2);
-        expect(encoder.length).toBe(2);
-
-        // excess limit
-        expect(() => encoder.uint8(3)).toThrow();
-      }
+      });
     });
 
-    test('apply', () => {
-      const spy = vi.fn();
-      const encoder = new Encoder();
-      encoder.apply(spy);
+    describe('encode', () => {
+      it('should be called with this encoder and the provided value as arguments', () => {
+        const spy = vi.fn();
+        const encoder = new Encoder();
+        encoder.encode(3, spy);
 
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy).toHaveBeenNthCalledWith(1, encoder);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenNthCalledWith(1, encoder, 3);
+      });
     });
 
     describe('numbers', () => {
-      describe('uint8', () => {
+      describe('int8', () => {
         test('int8', () => {
           const encoder = new Encoder();
           expect(encoder.int8(1).toUint8Array()).toEqual(new Uint8Array([1]));
@@ -127,9 +147,11 @@ describe('Encoder', () => {
         });
       });
 
-      test('uint8', () => {
-        const encoder = new Encoder();
-        expect(encoder.uint8(1).toUint8Array()).toEqual(new Uint8Array([1]));
+      describe('uint8', () => {
+        test('uint8', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint8(1).toUint8Array()).toEqual(new Uint8Array([1]));
+        });
       });
 
       describe('uint16', () => {
@@ -255,10 +277,14 @@ describe('Encoder', () => {
       });
     });
 
-    test('bytes', () => {
-      const encoder = new Encoder();
-      expect(encoder.bytes(new Uint8Array([0, 1])).toUint8Array()).toEqual(new Uint8Array([0, 1]));
-      expect(encoder.length).toBe(2);
+    describe('bytes', () => {
+      test('bytes', () => {
+        const encoder = new Encoder();
+        expect(encoder.bytes(new Uint8Array([0, 1])).toUint8Array()).toEqual(
+          new Uint8Array([0, 1]),
+        );
+        expect(encoder.length).toBe(2);
+      });
     });
 
     describe('string', () => {
@@ -364,6 +390,20 @@ describe('Encoder', () => {
         const a: any = { a: null };
         a.a = a;
         expect(() => new Encoder().json(a).toUint8Array()).toThrow();
+      });
+    });
+
+    describe('iterable', () => {
+      test('array of numbers', () => {
+        const encoder = new Encoder();
+        expect(
+          encoder
+            .iterable([1, 9], (encoder: Encoder, value: number): void => {
+              encoder.uint8(value);
+            })
+            .toUint8Array(),
+        ).toEqual(new Uint8Array([1, 9]));
+        expect(encoder.length).toBe(2);
       });
     });
   });
