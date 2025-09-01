@@ -1,6 +1,12 @@
-import { set_float_16 } from '../functions.private/set_float_16.js';
-import { EncodeFunction } from './types/encode-function.js';
-import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
+import { numberToSingleAlphanumeric } from '../functions.private/alphanumeric/number-to-single-alphanumeric.js';
+import { set_float_16 } from '../functions.private/f16/set_float_16.js';
+import { isSafeQuotedPrintableChar } from '../functions.private/quoted-printable/is-safe-quoted-printable-char.js';
+import { isTabOrSpace } from '../functions.private/quoted-printable/is-tab-or-space.js';
+import { type EncodeFunction } from './types/encode-function.js';
+import {
+  type EncoderStringOptions,
+  type EncoderStringQuotedPrintableOptions,
+} from './types/methods/string/encoder-string-options.js';
 
 /**
  * The optional options to provide to an `Encoder`.
@@ -76,6 +82,26 @@ export class Encoder {
     options?: EncoderOptions,
   ): Uint8Array {
     return new Encoder(options).encode(value, encode).toUint8Array();
+  }
+
+  /**
+   * Encodes a `string`.
+   */
+  static string(value: string, options?: EncoderStringOptions): Uint8Array {
+    return this.encode<string>(value, (encoder: Encoder): void => {
+      encoder.string(value, options);
+    });
+  }
+
+  /**
+   * Encodes a `json` value.
+   */
+  static json(
+    value: any,
+    replacer?: (this: any, key: string, value: any) => any,
+    space?: string | number,
+  ): Uint8Array {
+    return new TextEncoder().encode(JSON.stringify(value, replacer, space));
   }
 
   readonly #resizeFactor: number;
@@ -410,10 +436,7 @@ export class Encoder {
    * - `hex`: assumes the string is an _hex string_ (ex: `0AF3`), and appends each decoded byte of this string, into this Encoder's bytes.
    * - `base64`: assumes the string is an _base64 string_ (ex: `YWJjZA==`), and appends each decoded byte of this string, into this Encoder's bytes.
    */
-  string(
-    value: string,
-    { encoding = 'utf-8' /* TODO: , ...options */ }: EncoderStringOptions = {},
-  ): this {
+  string(value: string, { encoding = 'utf-8', ...options }: EncoderStringOptions = {}): this {
     switch (encoding) {
       case 'utf-8':
         this.bytes(new TextEncoder().encode(value));
@@ -452,6 +475,139 @@ export class Encoder {
         this.string(atob(value), { encoding: 'binary' });
         break;
       }
+      case 'quoted-printable': {
+        const { mode = 'text', sub }: Omit<EncoderStringQuotedPrintableOptions, 'encoding'> =
+          options as Omit<EncoderStringQuotedPrintableOptions, 'encoding'>;
+
+        const bytes: Uint8Array = Encoder.string(value, sub);
+
+        const length: number = bytes.length;
+        const lengthMinusOne: number = length - 1;
+
+        const maxLineLength: number = 76;
+        let currentLineLength: number = 0;
+
+        switch (mode) {
+          case 'text': {
+            const lengthMinusTwo: number = length - 2;
+            const sequence: Uint8Array = new Uint8Array(3);
+            let sequenceLength: number = 0;
+
+            for (let i: number = 0; i < length; i++) {
+              const byte: number = bytes[i];
+
+              if (byte === 0x0d /* \r */ && i < lengthMinusOne && bytes[i + 1] === 0x0a /* \n */) {
+                // -> `byte` and the next one forms a "meaningful line break"
+                encodeQuotedPrintableLineBreak(this);
+                i += 1;
+                currentLineLength = 0;
+              } else {
+                // INFO possible alternative
+                // isSafeQuotedPrintableChar(byte) ||
+                // (isTabOrSpace(byte) &&
+                //   i !== lengthMinusOne /* is not last */ &&
+                //   /* not followed by a line break */
+                //   !(
+                //     i < lengthMinusTwo &&
+                //     bytes[i + 1] === 0x0d /* \r */ &&
+                //     bytes[i + 2] === 0x0a /* \n */
+                //   ) &&
+                //   /* not followed by tab or space */
+                //   (!isTabOrSpace(bytes[i + 1]) ||
+                //     /* OR followed by tab or space AND */
+                //     currentLineLength < maxLineLength - 1))
+
+                if (
+                  isSafeQuotedPrintableChar(byte) ||
+                  (isTabOrSpace(byte) &&
+                    /* not followed by a line break */
+                    !(
+                      i < lengthMinusTwo &&
+                      bytes[i + 1] === 0x0d /* \r */ &&
+                      bytes[i + 2] === 0x0a /* \n */
+                    ))
+                ) {
+                  sequence[0] = byte;
+                  sequenceLength = 1;
+                } else {
+                  // -> `byte` is NOT safe
+                  // -> `byte` must be encoded
+                  sequence[0] = 0x3d /* = */;
+                  sequence[1] = numberToSingleAlphanumeric(byte >> 4, true);
+                  sequence[2] = numberToSingleAlphanumeric(byte & 0x0f, true);
+                  sequenceLength = 3;
+                }
+
+                // WRITE SEQUENCE
+
+                // test if `sequence` can be written without exceeding `maxLineLength`:
+                // - if it's the last sequence, at least `sequenceLength` chars must be available
+                // - if it's not the last sequence, at least `sequenceLength + 1` chars must be available (to include a potential "soft line break": `=`)
+
+                // first we compute the size of the "next" line break
+                const lineBreakSize: number =
+                  /* is last */
+                  i === lengthMinusOne ||
+                  /* is followed by a "meaningful line break"*/
+                  (i < lengthMinusTwo &&
+                    bytes[i + 1] === 0x0d /* \r */ &&
+                    bytes[i + 2] === 0x0a) /* \n */
+                    ? 0 /* if this is the last sequence, or it's followed by a "meaningful line break", then the "next" line break has a size of 0 */
+                    : 1;
+
+                if (
+                  /* test if writing this sequence AND a "line break" will exceed `maxLineLength` */
+                  currentLineLength + sequenceLength + lineBreakSize <=
+                  maxLineLength
+                ) {
+                  // -> is safely writable
+                  this.#bytes.set(sequence, this.#alloc(sequenceLength));
+                  currentLineLength += sequenceLength;
+                } else {
+                  // -> writing this sequence AND a "line break" will exceed `maxLineLength`
+                  // thus, we have to end the current line and continue on a new one
+                  // for this, we introduce a "soft line break" and then write the sequence on the new line
+                  encodeQuotedPrintableSoftLineBreak(this);
+                  this.#bytes.set(sequence, this.#alloc(sequenceLength));
+                  currentLineLength = sequenceLength;
+                }
+              }
+            }
+            break;
+          }
+          case 'binary': {
+            const maxLineLengthMinusFour = maxLineLength - 4;
+
+            for (let i: number = 0; i < length; i++) {
+              const byte: number = bytes[i];
+
+              if (
+                /* test if writing this sequence AND a "soft line break" will exceed `maxLineLength` */
+                // currentLineLength + (i === lengthMinusOne /* is last */ ? 3 : 4) >
+                // maxLineLength
+                /* => optimized version => */
+                currentLineLength > maxLineLengthMinusFour
+              ) {
+                // -> writing this sequence AND a "soft line break" will exceed `maxLineLength`
+                // thus, we have to end the current line and continue on a new one
+                // for this, we introduce a "soft line break"
+                encodeQuotedPrintableSoftLineBreak(this);
+                currentLineLength = 0;
+              }
+
+              this.uint8(0x3d /* = */);
+              this.uint8(numberToSingleAlphanumeric(byte >> 4, true));
+              this.uint8(numberToSingleAlphanumeric(byte & 0x0f, true));
+
+              currentLineLength += 3;
+            }
+
+            break;
+          }
+        }
+
+        break;
+      }
     }
     return this;
   }
@@ -486,4 +642,16 @@ export class Encoder {
     }
     return this;
   }
+}
+
+/* FUNCTIONS */
+
+function encodeQuotedPrintableLineBreak(encoder: Encoder): void {
+  encoder.uint8(0x0d /* \r */);
+  encoder.uint8(0x0a /* \n */);
+}
+
+function encodeQuotedPrintableSoftLineBreak(encoder: Encoder): void {
+  encoder.uint8(0x3d /* = */);
+  encodeQuotedPrintableLineBreak(encoder);
 }

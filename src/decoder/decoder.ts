@@ -1,7 +1,11 @@
-import { get_float_16 } from '../functions.private/get_float_16.js';
+import { singleAlphanumericToNumber } from '../functions.private/alphanumeric/single-alphanumeric-to-number.js';
+import { get_float_16 } from '../functions.private/f16/get_float_16.js';
+import { isTabOrSpace } from '../functions.private/quoted-printable/is-tab-or-space.js';
+import { type DecodeFunction } from './types/decode-function.js';
 import {
   type DecoderStringHexOptions,
   type DecoderStringOptions,
+  type DecoderStringQuotedPrintableOptions,
 } from './types/methods/string/decoder-string-options.js';
 
 /**
@@ -26,7 +30,7 @@ export class Decoder {
    *
    * Then if the `Decoder` is `done`, it returns the returned value of `decode(...)`, else an `Error` is thrown.
    */
-  static decode<GReturn>(bytes: Uint8Array, decode: (decoder: Decoder) => GReturn): GReturn {
+  static decode<GReturn>(bytes: Uint8Array, decode: DecodeFunction<GReturn>): GReturn {
     const decoder: Decoder = new Decoder(bytes);
     const result: GReturn = decode(decoder);
     if (!decoder.done) {
@@ -39,7 +43,7 @@ export class Decoder {
    * Decodes a `string`.
    */
   static string(bytes: Uint8Array, options?: DecoderStringOptions): string {
-    return this.decode(bytes, (decoder: Decoder): string => {
+    return this.decode<string>(bytes, (decoder: Decoder): string => {
       return decoder.string(decoder.remaining, options);
     });
   }
@@ -116,6 +120,10 @@ export class Decoder {
   //   if (this.#cursor !== this.#bytes.length) {
   //     throw new Error(`${this.#bytes.length - this.#cursor} bytes remaining.`);
   //   }
+  // }
+
+  // decode<GReturn>(decode: DecodeFunction<GReturn>): GReturn {
+  //   return decode(this);
   // }
 
   /**
@@ -297,6 +305,77 @@ export class Decoder {
         // const i: number = this.#consume(length);
         // return this.#bytes.subarray(i, i + length).toBase64(options);
         return btoa(this.string(length, { encoding: 'binary' }));
+      }
+      case 'quoted-printable': {
+        // https://datatracker.ietf.org/doc/html/rfc2045#section-6.7
+        // https://en.wikipedia.org/wiki/Quoted-printable
+        // https://www.webatic.com/quoted-printable-convertor
+        // https://github.com/mathiasbynens/quoted-printable/blob/master/src/quoted-printable.js
+
+        const start: number = this.#consume(length);
+
+        let output: Uint8Array = new Uint8Array(length);
+        let outputLength: number = 0;
+
+        const lengthMinusOne: number = length - 1;
+        const lengthMinusTwo: number = length - 2;
+
+        const error = (message: string): never => {
+          throw new Error(`Invalid quoted-printable encoding: ${message}`);
+        };
+
+        const removeTrailingWhiteSpaces = (): void => {
+          // “Therefore, when decoding a `Quoted-Printable` body, any trailing white
+          // space on a line must be deleted, as it will necessarily have been added
+          // by intermediate transport agents.”
+          while (outputLength >= 0 && isTabOrSpace(output[outputLength - 1])) {
+            outputLength--;
+          }
+        };
+
+        for (let i: number = 0; i < length; i++) {
+          const index: number = start + i;
+          const byte: number = this.#bytes[index];
+
+          if (byte === 0x3d /* = */) {
+            if (i >= lengthMinusTwo) {
+              error('found an equal sign without without two following characters.');
+            }
+
+            const a: number = this.#bytes[index + 1];
+            const b: number = this.#bytes[index + 2];
+            i += 2;
+
+            if (a === 0x0d /* \r */) {
+              if (b !== 0x0a /* \n */) {
+                error('found a CR sequence without a following LF.');
+              } // else "soft line break" -> ignore
+            } else {
+              output[outputLength++] =
+                (singleAlphanumericToNumber(a) << 4) | singleAlphanumericToNumber(b);
+            }
+          } else if (byte === 0x0d /* \r */) {
+            if (i >= lengthMinusOne || this.#bytes[index + 1] !== 0x0a /* \n */) {
+              error('found a CR sequence without a following LF.');
+            } // else "meaningful line break"
+
+            i += 1;
+
+            removeTrailingWhiteSpaces();
+
+            output[outputLength++] = 0x0d /* \r */;
+            output[outputLength++] = 0x0a /* \n */;
+          } else {
+            output[outputLength++] = byte;
+          }
+        }
+
+        removeTrailingWhiteSpaces();
+
+        return Decoder.string(
+          output.subarray(0, outputLength),
+          (options as Omit<DecoderStringQuotedPrintableOptions, 'encoding'>).sub,
+        );
       }
       default:
         return new TextDecoder(encoding, options as TextDecoderOptions).decode(this.bytes(length));
