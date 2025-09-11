@@ -1,5 +1,5 @@
 import { describe, expect, it, test } from 'vitest';
-import { Decoder } from '../decoder/decoder.js';
+import { Decoder } from './decoder.js';
 
 describe('Decoder', () => {
   it('should be able to decode a binary string', () => {
@@ -225,10 +225,18 @@ describe('Decoder', () => {
       });
     });
 
-    test('bytes', () => {
-      const decoder = new Decoder(new Uint8Array([0, 1]));
-      expect(decoder.bytes(decoder.remaining)).toEqual(new Uint8Array([0, 1]));
-      expect(decoder.consumed).toBe(2);
+    describe('bytes', () => {
+      test('bytes', () => {
+        const decoder = new Decoder(new Uint8Array([0, 1]));
+        expect(decoder.bytes(decoder.remaining)).toEqual(new Uint8Array([0, 1]));
+        expect(decoder.consumed).toBe(2);
+      });
+
+      it('should consume all remaining bytes if length is omitted', () => {
+        const decoder = new Decoder(new Uint8Array([0, 1]));
+        expect(decoder.bytes()).toEqual(new Uint8Array([0, 1]));
+        expect(decoder.consumed).toBe(2);
+      });
     });
 
     describe('string', () => {
@@ -272,132 +280,107 @@ describe('Decoder', () => {
         });
       });
 
-      describe('encoding=hex', () => {
-        test('lowercase', () => {
-          const decoder = new Decoder(new Uint8Array([0x12, 0xaf]));
-          expect(decoder.string(decoder.remaining, { encoding: 'hex', uppercase: false })).toBe(
-            '12af',
-          );
-          expect(decoder.consumed).toBe(2);
-        });
-        test('uppercase', () => {
-          const decoder = new Decoder(new Uint8Array([0x12, 0xaf]));
-          expect(decoder.string(decoder.remaining, { encoding: 'hex', uppercase: true })).toBe(
-            '12AF',
-          );
-          expect(decoder.consumed).toBe(2);
-        });
-      });
-
-      describe('encoding=base64', () => {
-        test('valid chars', () => {
-          const decoder = new Decoder(new Uint8Array([97, 98, 99, 100]));
-          expect(decoder.string(decoder.remaining, { encoding: 'base64' })).toBe(btoa('abcd'));
-          expect(decoder.consumed).toBe(4);
-        });
-      });
-
-      describe('encoding=quoted-printable', () => {
-        test('quoted-printable string', () => {
-          const input =
-            `J'interdis aux marchands de vanter trop leurs marchandises. Car ils se font=
- vite p=C3=A9dagogues et t'enseignent comme but ce qui n'est par essence qu=
-'un moyen, et te trompant ainsi sur la route =C3=A0 suivre les voil=C3=A0 b=
-ient=C3=B4t qui te d=C3=A9gradent, car si leur musique est vulgaire ils te =
-fabriquent pour te la vendre une =C3=A2me vulgaire.
-
-   =E2=80=94=E2=80=89Antoine de Saint-Exup=C3=A9ry, Citadelle (1948)`.replaceAll('\n', '\r\n');
-
-          const output =
-            `J'interdis aux marchands de vanter trop leurs marchandises. Car ils se font vite pédagogues et t'enseignent comme but ce qui n'est par essence qu'un moyen, et te trompant ainsi sur la route à suivre les voilà bientôt qui te dégradent, car si leur musique est vulgaire ils te fabriquent pour te la vendre une âme vulgaire.
-
-   — Antoine de Saint-Exupéry, Citadelle (1948)`.replaceAll('\n', '\r\n');
-
-          const bytes: Uint8Array = new TextEncoder().encode(input);
-
-          const decoder = new Decoder(bytes);
-
-          expect(
-            decoder.string(decoder.remaining, {
-              encoding: 'quoted-printable',
-              sub: {
-                encoding: 'utf-8',
-              },
-            }),
-          ).toBe(output);
-          expect(decoder.consumed).toBe(bytes.length);
-        });
-
-        describe('invalid quoted-printable string', () => {
-          describe('around equal sign: =XX', () => {
-            test('not enough chars after =', () => {
-              expect(() =>
-                Decoder.string(new TextEncoder().encode('=C'), {
-                  encoding: 'quoted-printable',
-                }),
-              ).toThrow();
-            });
-
-            test('not alphanumerical after =', () => {
-              expect(() =>
-                Decoder.string(new TextEncoder().encode('=G0'), {
-                  encoding: 'quoted-printable',
-                }),
-              ).toThrow();
-
-              expect(() =>
-                Decoder.string(new TextEncoder().encode('=0G'), {
-                  encoding: 'quoted-printable',
-                }),
-              ).toThrow();
-            });
-
-            test('expect LF after CR', () => {
-              expect(() =>
-                Decoder.string(new TextEncoder().encode('=\rA'), {
-                  encoding: 'quoted-printable',
-                }),
-              ).toThrow();
-            });
-          });
-
-          describe('around CRLF', () => {
-            test('not enough chars after CR', () => {
-              expect(() =>
-                Decoder.string(new TextEncoder().encode('\r'), {
-                  encoding: 'quoted-printable',
-                }),
-              ).toThrow();
-            });
-
-            test('expect LF after CR', () => {
-              expect(() =>
-                Decoder.string(new TextEncoder().encode('\rA'), {
-                  encoding: 'quoted-printable',
-                }),
-              ).toThrow();
-            });
-          });
-        });
-
-        describe('out of spec', () => {
-          test('lowercase alphanumerical after =', () => {
-            expect(
-              Decoder.string(new TextEncoder().encode('=3d'), {
-                encoding: 'quoted-printable',
-              }),
-            ).toBe('=');
-          });
-
-          test('trailing white space', () => {
-            expect(
-              Decoder.string(new TextEncoder().encode('a   \r\n'), {
-                encoding: 'quoted-printable',
-              }),
-            ).toBe('a\r\n');
-          });
-        });
-      });
+      //       describe.skip('encoding=quoted-printable', () => {
+      //         test('quoted-printable string', () => {
+      //           const input =
+      //             `J'interdis aux marchands de vanter trop leurs marchandises. Car ils se font=
+      //  vite p=C3=A9dagogues et t'enseignent comme but ce qui n'est par essence qu=
+      // 'un moyen, et te trompant ainsi sur la route =C3=A0 suivre les voil=C3=A0 b=
+      // ient=C3=B4t qui te d=C3=A9gradent, car si leur musique est vulgaire ils te =
+      // fabriquent pour te la vendre une =C3=A2me vulgaire.
+      //
+      //    =E2=80=94=E2=80=89Antoine de Saint-Exup=C3=A9ry, Citadelle (1948)`.replaceAll('\n', '\r\n');
+      //
+      //           const output =
+      //             `J'interdis aux marchands de vanter trop leurs marchandises. Car ils se font vite pédagogues et t'enseignent comme but ce qui n'est par essence qu'un moyen, et te trompant ainsi sur la route à suivre les voilà bientôt qui te dégradent, car si leur musique est vulgaire ils te fabriquent pour te la vendre une âme vulgaire.
+      //
+      //    — Antoine de Saint-Exupéry, Citadelle (1948)`.replaceAll('\n', '\r\n');
+      //
+      //           const bytes: Uint8Array = new TextEncoder().encode(input);
+      //
+      //           const decoder = new Decoder(bytes);
+      //
+      //           expect(
+      //             decoder.string(decoder.remaining, {
+      //               encoding: 'quoted-printable',
+      //               sub: {
+      //                 encoding: 'utf-8',
+      //               },
+      //             }),
+      //           ).toBe(output);
+      //           expect(decoder.consumed).toBe(bytes.length);
+      //         });
+      //
+      //         describe('invalid quoted-printable string', () => {
+      //           describe('around equal sign: =XX', () => {
+      //             test('not enough chars after =', () => {
+      //               expect(() =>
+      //                 Decoder.string(new TextEncoder().encode('=C'), {
+      //                   encoding: 'quoted-printable',
+      //                 }),
+      //               ).toThrow();
+      //             });
+      //
+      //             test('not alphanumerical after =', () => {
+      //               expect(() =>
+      //                 Decoder.string(new TextEncoder().encode('=G0'), {
+      //                   encoding: 'quoted-printable',
+      //                 }),
+      //               ).toThrow();
+      //
+      //               expect(() =>
+      //                 Decoder.string(new TextEncoder().encode('=0G'), {
+      //                   encoding: 'quoted-printable',
+      //                 }),
+      //               ).toThrow();
+      //             });
+      //
+      //             test('expect LF after CR', () => {
+      //               expect(() =>
+      //                 Decoder.string(new TextEncoder().encode('=\rA'), {
+      //                   encoding: 'quoted-printable',
+      //                 }),
+      //               ).toThrow();
+      //             });
+      //           });
+      //
+      //           describe('around CRLF', () => {
+      //             test('not enough chars after CR', () => {
+      //               expect(() =>
+      //                 Decoder.string(new TextEncoder().encode('\r'), {
+      //                   encoding: 'quoted-printable',
+      //                 }),
+      //               ).toThrow();
+      //             });
+      //
+      //             test('expect LF after CR', () => {
+      //               expect(() =>
+      //                 Decoder.string(new TextEncoder().encode('\rA'), {
+      //                   encoding: 'quoted-printable',
+      //                 }),
+      //               ).toThrow();
+      //             });
+      //           });
+      //         });
+      //
+      //         describe('out of spec', () => {
+      //           test('lowercase alphanumerical after =', () => {
+      //             expect(
+      //               Decoder.string(new TextEncoder().encode('=3d'), {
+      //                 encoding: 'quoted-printable',
+      //               }),
+      //             ).toBe('=');
+      //           });
+      //
+      //           test('trailing white space', () => {
+      //             expect(
+      //               Decoder.string(new TextEncoder().encode('a   \r\n'), {
+      //                 encoding: 'quoted-printable',
+      //               }),
+      //             ).toBe('a\r\n');
+      //           });
+      //         });
+      //       });
     });
 
     describe('json', () => {
@@ -408,7 +391,7 @@ fabriquent pour te la vendre une =C3=A2me vulgaire.
       });
 
       test('invalid json', () => {
-        expect(() => new Decoder(new Uint8Array([123])).json(1)).toThrow();
+        expect(() => new Decoder(new Uint8Array([123])).json()).toThrow();
       });
     });
   });

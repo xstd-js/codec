@@ -1,4 +1,4 @@
-import { type Encoder } from '../../../encoder/encoder.js';
+import { type Encoder } from '../../../../src/encoder/encoder.js';
 
 export function encodeJsopSize(encoder: Encoder, size: number): void {
   let byte: number;

@@ -1,4 +1,4 @@
-import { type Decoder } from '../../../decoder/decoder.js';
+import { type Decoder } from '../../../../src/decoder/decoder.js';
 
 export function decodeJsopSize(dencoder: Decoder): number {
   let size: number = 0;

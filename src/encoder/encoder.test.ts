@@ -1,6 +1,5 @@
 import { describe, expect, it, test, vi } from 'vitest';
 import { Encoder } from './encoder.js';
-import { EncoderStringQuotedPrintableOptions } from './types/methods/string/encoder-string-options.js';
 
 describe('Encoder', () => {
   it('should be able to encode a binary string', () => {
@@ -359,199 +358,205 @@ describe('Encoder', () => {
         });
       });
 
-      describe('encoding=hex', () => {
-        test('valid chars', () => {
-          const encoder = new Encoder();
-          expect(encoder.string('12Af', { encoding: 'hex' }).toUint8Array()).toEqual(
-            new Uint8Array([0x12, 0xaf]),
-          );
-          expect(encoder.length).toBe(2);
-        });
-
-        test('invalid valid chars', () => {
-          expect(() => new Encoder().string('12Zu', { encoding: 'hex' }).toUint8Array()).toThrow();
-        });
+      test('encoding=invalid', () => {
+        expect(() =>
+          new Encoder().string('abc', { encoding: 'invalid' as any }).toUint8Array(),
+        ).toThrow();
       });
 
-      describe('encoding=base64', () => {
-        test('valid chars', () => {
-          const encoder = new Encoder();
-          expect(encoder.string(btoa('abcd'), { encoding: 'base64' }).toUint8Array()).toEqual(
-            new Uint8Array([97, 98, 99, 100]),
-          );
-          expect(encoder.length).toBe(4);
-        });
-
-        test('invalid valid chars', () => {
-          expect(() =>
-            new Encoder().string('???', { encoding: 'base64' }).toUint8Array(),
-          ).toThrow();
-        });
-      });
-
-      describe('encoding=quoted-printable', () => {
-        const asText = (input: Uint8Array) => new TextDecoder().decode(input);
-
-        describe('mode=text', () => {
-          const options: EncoderStringQuotedPrintableOptions = {
-            encoding: 'quoted-printable',
-            mode: 'text',
-          };
-
-          test('with only safe chars', () => {
-            expect(asText(Encoder.string('abc', options))).toBe('abc');
-          });
-
-          test('with unsafe char', () => {
-            expect(asText(Encoder.string('é', options))).toBe('=C3=A9');
-          });
-
-          test('with safe and unsafe chars', () => {
-            expect(asText(Encoder.string('aéb=c', options))).toBe('a=C3=A9b=3Dc');
-          });
-
-          test('with only safe chars reaching the limit of the max line length', () => {
-            const asText = (input: Uint8Array) => new TextDecoder().decode(input);
-
-            expect(
-              asText(
-                Encoder.string(
-                  '0123456789012345678901234567890123456789012345678901234567890123456789012345' /* 76 chars */,
-                  options,
-                ),
-              ),
-            ).toBe('0123456789012345678901234567890123456789012345678901234567890123456789012345');
-          });
-
-          test('with only safe chars involving a soft line break', () => {
-            expect(
-              asText(
-                Encoder.string(
-                  '01234567890123456789012345678901234567890123456789012345678901234567890123456789' /* 80 chars */,
-                  options,
-                ),
-              ),
-            ).toBe(
-              '012345678901234567890123456789012345678901234567890123456789012345678901234=\r\n56789',
-            );
-          });
-
-          test('with only safe chars involving a meaning full line break', () => {
-            expect(
-              asText(
-                Encoder.string('012345\r\n6789', {
-                  encoding: 'quoted-printable',
-                }),
-              ),
-            ).toBe('012345\r\n6789');
-          });
-
-          test('with only safe chars reaching the limit of the max line length and involving a meaning full line break', () => {
-            expect(
-              asText(
-                Encoder.string(
-                  '0123456789012345678901234567890123456789012345678901234567890123456789012345\r\n6789' /* 76 chars + CRLF + 4 chars */,
-                  options,
-                ),
-              ),
-            ).toBe(
-              '0123456789012345678901234567890123456789012345678901234567890123456789012345\r\n6789',
-            );
-          });
-
-          test('with unsafe chars reaching the limit of the max line length and involving a soft line break', () => {
-            expect(
-              asText(
-                Encoder.string(
-                  '012345678901234567890123456789012345678901234567890123456789012345678901=6789' /* 72 chars + = + 4 chars */,
-                  options,
-                ),
-              ),
-            ).toBe(
-              '012345678901234567890123456789012345678901234567890123456789012345678901=3D=\r\n6789',
-            );
-
-            expect(
-              asText(
-                Encoder.string(
-                  '0123456789012345678901234567890123456789012345678901234567890123456789012=6789' /* 73 chars + = + 4 chars */,
-                  options,
-                ),
-              ),
-            ).toBe(
-              '0123456789012345678901234567890123456789012345678901234567890123456789012=\r\n=3D6789',
-            );
-          });
-
-          test('with unsafe chars reaching the limit of the max line length and involving a meaning full line break', () => {
-            expect(
-              asText(
-                Encoder.string(
-                  '0123456789012345678901234567890123456789012345678901234567890123456789012=\r\n6789' /* 73 chars + =  + CRLF + 4 chars */,
-                  options,
-                ),
-              ),
-            ).toBe(
-              '0123456789012345678901234567890123456789012345678901234567890123456789012=3D\r\n6789',
-            );
-          });
-
-          describe('with space and tabs', () => {
-            test('base', () => {
-              expect(asText(Encoder.string('a b\tc', options))).toBe('a b\tc');
-            });
-
-            test('not encoded if last', () => {
-              expect(asText(Encoder.string('ab\t', options))).toBe('ab\t');
-            });
-
-            test('encoded if followed by a line break', () => {
-              expect(asText(Encoder.string('ab\t\r\nc', options))).toBe('ab=09\r\nc');
-            });
-
-            test('only the last one of the line is encoded', () => {
-              expect(asText(Encoder.string('ab  \r\nc', options))).toBe('ab =20\r\nc');
-            });
-
-            test('only the last one of the line is encoded and involves a soft line break', () => {
-              expect(asText(Encoder.string(' '.repeat(80), options))).toBe(
-                '                                                                           =\r\n' +
-                  '     ',
-              );
-            });
-          });
-        });
-
-        describe('mode=binary', () => {
-          const options: EncoderStringQuotedPrintableOptions = {
-            encoding: 'quoted-printable',
-            mode: 'binary',
-            sub: {
-              encoding: 'binary',
-            },
-          };
-
-          test('with binary string', () => {
-            expect(asText(Encoder.string('\x3D\x12', options))).toBe('=3D=12');
-          });
-
-          test('with soft line break', () => {
-            expect(
-              asText(
-                Encoder.string(
-                  '01234567890123456789012345678901234567890123456789012345678901234567890123456789' /* 80 chars */,
-                  options,
-                ),
-              ),
-            ).toBe(
-              '=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=\r\n' +
-                '=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=\r\n' +
-                '=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=\r\n' +
-                '=35=36=37=38=39',
-            );
-          });
-        });
-      });
+      // describe('encoding=hex', () => {
+      //   test('valid chars', () => {
+      //     const encoder = new Encoder();
+      //     expect(encoder.string('12Af', { encoding: 'hex' }).toUint8Array()).toEqual(
+      //       new Uint8Array([0x12, 0xaf]),
+      //     );
+      //     expect(encoder.length).toBe(2);
+      //   });
+      //
+      //   test('invalid valid chars', () => {
+      //     expect(() => new Encoder().string('12Zu', { encoding: 'hex' }).toUint8Array()).toThrow();
+      //   });
+      // });
+      //
+      // describe('encoding=base64', () => {
+      //   test('valid chars', () => {
+      //     const encoder = new Encoder();
+      //     expect(encoder.string(btoa('abcd'), { encoding: 'base64' }).toUint8Array()).toEqual(
+      //       new Uint8Array([97, 98, 99, 100]),
+      //     );
+      //     expect(encoder.length).toBe(4);
+      //   });
+      //
+      //   test('invalid valid chars', () => {
+      //     expect(() =>
+      //       new Encoder().string('???', { encoding: 'base64' }).toUint8Array(),
+      //     ).toThrow();
+      //   });
+      // });
+      //
+      // describe.skip('encoding=quoted-printable', () => {
+      //   const asText = (input: Uint8Array) => new TextDecoder().decode(input);
+      //
+      //   describe('mode=text', () => {
+      //     const options: EncoderStringQuotedPrintableOptions = {
+      //       encoding: 'quoted-printable',
+      //       mode: 'text',
+      //     };
+      //
+      //     test('with only safe chars', () => {
+      //       expect(asText(Encoder.string('abc', options))).toBe('abc');
+      //     });
+      //
+      //     test('with unsafe char', () => {
+      //       expect(asText(Encoder.string('é', options))).toBe('=C3=A9');
+      //     });
+      //
+      //     test('with safe and unsafe chars', () => {
+      //       expect(asText(Encoder.string('aéb=c', options))).toBe('a=C3=A9b=3Dc');
+      //     });
+      //
+      //     test('with only safe chars reaching the limit of the max line length', () => {
+      //       const asText = (input: Uint8Array) => new TextDecoder().decode(input);
+      //
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '0123456789012345678901234567890123456789012345678901234567890123456789012345' /* 76 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe('0123456789012345678901234567890123456789012345678901234567890123456789012345');
+      //     });
+      //
+      //     test('with only safe chars involving a soft line break', () => {
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '01234567890123456789012345678901234567890123456789012345678901234567890123456789' /* 80 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe(
+      //         '012345678901234567890123456789012345678901234567890123456789012345678901234=\r\n56789',
+      //       );
+      //     });
+      //
+      //     test('with only safe chars involving a meaning full line break', () => {
+      //       expect(
+      //         asText(
+      //           Encoder.string('012345\r\n6789', {
+      //             encoding: 'quoted-printable',
+      //           }),
+      //         ),
+      //       ).toBe('012345\r\n6789');
+      //     });
+      //
+      //     test('with only safe chars reaching the limit of the max line length and involving a meaning full line break', () => {
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '0123456789012345678901234567890123456789012345678901234567890123456789012345\r\n6789' /* 76 chars + CRLF + 4 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe(
+      //         '0123456789012345678901234567890123456789012345678901234567890123456789012345\r\n6789',
+      //       );
+      //     });
+      //
+      //     test('with unsafe chars reaching the limit of the max line length and involving a soft line break', () => {
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '012345678901234567890123456789012345678901234567890123456789012345678901=6789' /* 72 chars + = + 4 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe(
+      //         '012345678901234567890123456789012345678901234567890123456789012345678901=3D=\r\n6789',
+      //       );
+      //
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '0123456789012345678901234567890123456789012345678901234567890123456789012=6789' /* 73 chars + = + 4 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe(
+      //         '0123456789012345678901234567890123456789012345678901234567890123456789012=\r\n=3D6789',
+      //       );
+      //     });
+      //
+      //     test('with unsafe chars reaching the limit of the max line length and involving a meaning full line break', () => {
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '0123456789012345678901234567890123456789012345678901234567890123456789012=\r\n6789' /* 73 chars + =  + CRLF + 4 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe(
+      //         '0123456789012345678901234567890123456789012345678901234567890123456789012=3D\r\n6789',
+      //       );
+      //     });
+      //
+      //     describe('with space and tabs', () => {
+      //       test('base', () => {
+      //         expect(asText(Encoder.string('a b\tc', options))).toBe('a b\tc');
+      //       });
+      //
+      //       test('not encoded if last', () => {
+      //         expect(asText(Encoder.string('ab\t', options))).toBe('ab\t');
+      //       });
+      //
+      //       test('encoded if followed by a line break', () => {
+      //         expect(asText(Encoder.string('ab\t\r\nc', options))).toBe('ab=09\r\nc');
+      //       });
+      //
+      //       test('only the last one of the line is encoded', () => {
+      //         expect(asText(Encoder.string('ab  \r\nc', options))).toBe('ab =20\r\nc');
+      //       });
+      //
+      //       test('only the last one of the line is encoded and involves a soft line break', () => {
+      //         expect(asText(Encoder.string(' '.repeat(80), options))).toBe(
+      //           '                                                                           =\r\n' +
+      //             '     ',
+      //         );
+      //       });
+      //     });
+      //   });
+      //
+      //   describe('mode=binary', () => {
+      //     const options: EncoderStringQuotedPrintableOptions = {
+      //       encoding: 'quoted-printable',
+      //       mode: 'binary',
+      //       sub: {
+      //         encoding: 'binary',
+      //       },
+      //     };
+      //
+      //     test('with binary string', () => {
+      //       expect(asText(Encoder.string('\x3D\x12', options))).toBe('=3D=12');
+      //     });
+      //
+      //     test('with soft line break', () => {
+      //       expect(
+      //         asText(
+      //           Encoder.string(
+      //             '01234567890123456789012345678901234567890123456789012345678901234567890123456789' /* 80 chars */,
+      //             options,
+      //           ),
+      //         ),
+      //       ).toBe(
+      //         '=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=\r\n' +
+      //           '=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=\r\n' +
+      //           '=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=35=36=37=38=39=30=31=32=33=34=\r\n' +
+      //           '=35=36=37=38=39',
+      //       );
+      //     });
+      //   });
+      // });
     });
 
     describe('json', () => {

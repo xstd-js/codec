@@ -1,3 +1,6 @@
+/**
+ * Converts a number (0-16) into its alphanumeric counterpart (0-9a-fA-F).
+ */
 export function numberToSingleAlphanumeric(
   input: number /* [0, 0x0f] */,
   uppercase: boolean,

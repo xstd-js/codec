@@ -1,12 +1,6 @@
-import { singleAlphanumericToNumber } from '../functions.private/alphanumeric/single-alphanumeric-to-number.js';
-import { get_float_16 } from '../functions.private/f16/get_float_16.js';
-import { isTabOrSpace } from '../functions.private/quoted-printable/is-tab-or-space.js';
+import { get_float_16 } from '../functions.private/f16.skip-test/get_float_16.js';
 import { type DecodeFunction } from './types/decode-function.js';
-import {
-  type DecoderStringHexOptions,
-  type DecoderStringOptions,
-  type DecoderStringQuotedPrintableOptions,
-} from './types/methods/string/decoder-string-options.js';
+import { type DecoderStringOptions } from './types/methods/string/decoder-string-options.js';
 
 /**
  * Used to _decode_ an `Uint8Array` into various kind of data.
@@ -124,6 +118,10 @@ export class Decoder {
 
   // decode<GReturn>(decode: DecodeFunction<GReturn>): GReturn {
   //   return decode(this);
+  // }
+
+  // fork(length: number = this.remaining): Decoder {
+  //   return new Decoder(this.#bytes.subarray(this.#cursor, this.#cursor + Math.max(0, length)));
   // }
 
   /**
@@ -259,8 +257,11 @@ export class Decoder {
 
   /**
    * Reads an `Uint8Array` from this Decoder.
+   *
+   * @param {number} [length] The length of the bytes to read.
+   * @returns {Uint8Array} The read bytes.
    */
-  bytes(length: number): Uint8Array {
+  bytes(length: number = this.remaining): Uint8Array {
     const index: number = this.#consume(length);
     return this.#bytes.subarray(index, index + length);
   }
@@ -268,15 +269,17 @@ export class Decoder {
   /**
    * Reads a `string` from this Decoder.
    *
-   * The string may be encoded in different formats:
+   * The string, represented as bytes in this Decoder, has been encoded with a specific `encoding`,
+   * thus, we have to decode it using the same specific `encoding`:
    *
-   * - `utf-8` _(default)_: encodes the string in utf-8 format.
-   * - `binary`: encodes the string in _binary_ format.
-   * - `hex`: encodes the string in _hex_ format (ex: `0AF3`).
-   * - `base64`: encodes the string in _base64_ format (ex: `YWJjZA==`).
-   * - any [valid labels](https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings): encodes the string according to this format, if it is supported.
+   * - `utf-8` _(default)_: decodes the string with the _utf-8_ encoding.
+   * - `binary`: returns a string in _binary_ format (no encoding).
+   * - any [valid labels](https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings): decodes string according to this format, if it is supported.
    */
-  string(length: number, { encoding, ...options }: DecoderStringOptions = {}): string {
+  string(
+    length: number = this.remaining,
+    { encoding, ...options }: DecoderStringOptions = {},
+  ): string {
     switch (encoding) {
       case 'binary': {
         let output: string = '';
@@ -286,97 +289,6 @@ export class Decoder {
         }
         return output;
       }
-      case 'hex': {
-        // TODO => replace when widely available
-        // const i: number = this.#consume(length);
-        // return this.#bytes.subarray(i, i + length).toHex();
-        let output: string = '';
-        let j: number = this.#consume(length);
-        for (let i: number = 0; i < length; i++, j++) {
-          output += this.#bytes[j].toString(16).padStart(2, '0');
-        }
-        if ((options as Omit<DecoderStringHexOptions, 'encoding'>).uppercase) {
-          output = output.toUpperCase();
-        }
-        return output;
-      }
-      case 'base64': {
-        // TODO => replace when widely available
-        // const i: number = this.#consume(length);
-        // return this.#bytes.subarray(i, i + length).toBase64(options);
-        return btoa(this.string(length, { encoding: 'binary' }));
-      }
-      case 'quoted-printable': {
-        // https://datatracker.ietf.org/doc/html/rfc2045#section-6.7
-        // https://en.wikipedia.org/wiki/Quoted-printable
-        // https://www.webatic.com/quoted-printable-convertor
-        // https://github.com/mathiasbynens/quoted-printable/blob/master/src/quoted-printable.js
-
-        const start: number = this.#consume(length);
-
-        let output: Uint8Array = new Uint8Array(length);
-        let outputLength: number = 0;
-
-        const lengthMinusOne: number = length - 1;
-        const lengthMinusTwo: number = length - 2;
-
-        const error = (message: string): never => {
-          throw new Error(`Invalid quoted-printable encoding: ${message}`);
-        };
-
-        const removeTrailingWhiteSpaces = (): void => {
-          // “Therefore, when decoding a `Quoted-Printable` body, any trailing white
-          // space on a line must be deleted, as it will necessarily have been added
-          // by intermediate transport agents.”
-          while (outputLength >= 0 && isTabOrSpace(output[outputLength - 1])) {
-            outputLength--;
-          }
-        };
-
-        for (let i: number = 0; i < length; i++) {
-          const index: number = start + i;
-          const byte: number = this.#bytes[index];
-
-          if (byte === 0x3d /* = */) {
-            if (i >= lengthMinusTwo) {
-              error('found an equal sign without without two following characters.');
-            }
-
-            const a: number = this.#bytes[index + 1];
-            const b: number = this.#bytes[index + 2];
-            i += 2;
-
-            if (a === 0x0d /* \r */) {
-              if (b !== 0x0a /* \n */) {
-                error('found a CR sequence without a following LF.');
-              } // else "soft line break" -> ignore
-            } else {
-              output[outputLength++] =
-                (singleAlphanumericToNumber(a) << 4) | singleAlphanumericToNumber(b);
-            }
-          } else if (byte === 0x0d /* \r */) {
-            if (i >= lengthMinusOne || this.#bytes[index + 1] !== 0x0a /* \n */) {
-              error('found a CR sequence without a following LF.');
-            } // else "meaningful line break"
-
-            i += 1;
-
-            removeTrailingWhiteSpaces();
-
-            output[outputLength++] = 0x0d /* \r */;
-            output[outputLength++] = 0x0a /* \n */;
-          } else {
-            output[outputLength++] = byte;
-          }
-        }
-
-        removeTrailingWhiteSpaces();
-
-        return Decoder.string(
-          output.subarray(0, outputLength),
-          (options as Omit<DecoderStringQuotedPrintableOptions, 'encoding'>).sub,
-        );
-      }
       default:
         return new TextDecoder(encoding, options as TextDecoderOptions).decode(this.bytes(length));
     }
@@ -385,7 +297,32 @@ export class Decoder {
   /**
    * Reads `length` bytes from this Decoder as string, and returns `JSON.parse(...)` of this string.
    */
-  json<GValue>(length: number, reviver?: (this: any, key: string, value: any) => any): GValue {
+  json<GValue>(
+    length: number = this.remaining,
+    reviver?: (this: any, key: string, value: any) => any,
+  ): GValue {
     return JSON.parse(this.string(length), reviver);
   }
+
+  // /**
+  //  * Decodes an array of values.
+  //  *
+  //  * @param length
+  //  * @param decode
+  //  */
+  // iterable<GValue>(length: number = this.remaining, decode: DecodeFunction<GValue>): GValue[] {
+  //   const values: GValue[] = [];
+  //   const end: number = this.#cursor + length;
+  //   while (this.#cursor < end) {
+  //     values.push(decode(this));
+  //   }
+  //
+  //   if (this.#cursor !== end) {
+  //     throw new Error(
+  //       `Expected to decode ${length} bytes, but ${this.#cursor - end} where decoded instead (+${this.#cursor - end - length}).`,
+  //     );
+  //   }
+  //
+  //   return values;
+  // }
 }
