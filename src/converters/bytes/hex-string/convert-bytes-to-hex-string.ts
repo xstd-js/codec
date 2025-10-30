@@ -7,7 +7,7 @@ export interface ConvertBytesToHexStringOptions {
 }
 
 /**
- * Reads `length` bytes from `decoder`,
+ * Reads `length` bytes from `input`,
  * encodes them in _hex_ format, and writes the result into `output`.`
  *
  * @param {Decoder} input The `Decoder` to read from.

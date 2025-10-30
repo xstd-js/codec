@@ -1,4 +1,4 @@
-import { get_float_16 } from '../functions.private/f16.skip-test/get_float_16.js';
+import { get_float_16 } from '../functions.private/f16/get_float_16/get_float_16.js';
 import { type DecodeFunction } from './types/decode-function.js';
 import { type DecoderStringOptions } from './types/methods/string/decoder-string-options.js';
 

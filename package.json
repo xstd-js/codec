@@ -1,6 +1,6 @@
 {
   "name": "@xstd/codec",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "type": "module",
   "main": "./index.js",
   "scripts": {
@@ -27,17 +27,17 @@
     "url": "git+https://github.com/xstd-js/codec.git"
   },
   "devDependencies": {
-    "@types/node": "^24.3.0",
+    "@types/node": "^24.7.0",
     "@vitest/coverage-istanbul": "^3.2.4",
     "prettier": "^3.6.2",
-    "prettier-plugin-organize-imports": "^4.2.0",
-    "typedoc": "^0.28.12",
-    "typescript": "^5.9.2",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typedoc": "^0.28.13",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
-  "packageManager": "yarn@4.9.2",
+  "packageManager": "yarn@4.10.3",
   "fabrique": {
-    "version": "1.0.0",
+    "version": "1.0.8",
     "type": "lib"
   }
 }

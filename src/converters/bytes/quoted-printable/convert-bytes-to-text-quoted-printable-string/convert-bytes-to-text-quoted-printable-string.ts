@@ -1,12 +1,28 @@
-import { numberToSingleAlphanumeric } from '../../../converters/bytes/hex-string/number-to-single-alphanumeric/number-to-single-alphanumeric.js';
-import { type Encoder } from '../../../encoder/encoder.js';
-import { isSafeQuotedPrintableChar } from '../is-safe-quoted-printable-char.js';
-import { isTabOrSpace } from '../is-tab-or-space.js';
+import { type Decoder } from '../../../../decoder/decoder.js';
+import { type Encoder } from '../../../../encoder/encoder.js';
+import { isSafeQuotedPrintableChar } from '../../../quoted-printable/helpers.private/is-safe-quoted-printable-char.js';
+import { isTabOrSpace } from '../../../quoted-printable/helpers.private/is-tab-or-space.js';
+import { numberToSingleAlphanumeric } from '../../hex-string/number-to-single-alphanumeric/number-to-single-alphanumeric.js';
+import { encodeQuotedPrintableLineBreak } from '../helpers.private/encode-quoted-printable-line-break.js';
+import { encodeQuotedPrintableSoftLineBreak } from '../helpers.private/encode-quoted-printable-soft-line-break.js';
+import { QUOTED_PRINTABLE_MAX_LINE_LENGTH } from '../helpers.private/quoted-printable-max-line-length.constant.js';
 
-/* TEXT */
-
-export function encodeAsTextQuotedPrintable(encoder: Encoder, input: Uint8Array): void {
-  const inputLength: number = input.length;
+/**
+ * Reads `length` bytes from `input`,
+ * encodes them in _quoted-printable_ with a "text" format, and writes the result into `output`.`
+ *
+ * @param {Decoder} input The `Decoder` to read from.
+ * @param {Encoder} output The `Encoder` to write into.
+ * @param {number} [length] The length of the bytes to read and convert to quoted-printable chars.
+ * @returns {Encoder} The `output` Encoder with the encoded bytes.
+ */
+export function convertBytesToTextQuotedPrintableString<GOutput extends Encoder>(
+  input: Decoder,
+  output: GOutput,
+  length: number = input.remaining,
+): GOutput {
+  const inputBytes: Uint8Array = input.bytes(length);
+  const inputLength: number = inputBytes.length;
   const inputLengthMinusOne: number = inputLength - 1;
   const inputLengthMinusTwo: number = inputLength - 2;
 
@@ -16,11 +32,11 @@ export function encodeAsTextQuotedPrintable(encoder: Encoder, input: Uint8Array)
   let sequenceLength: number = 0;
 
   for (let i: number = 0; i < inputLength; i++) {
-    const byte: number = input[i];
+    const byte: number = inputBytes[i];
 
-    if (byte === 0x0d /* \r */ && i < inputLengthMinusOne && input[i + 1] === 0x0a /* \n */) {
+    if (byte === 0x0d /* \r */ && i < inputLengthMinusOne && inputBytes[i + 1] === 0x0a /* \n */) {
       // -> `byte` and the next one forms a "meaningful line break"
-      encodeQuotedPrintableLineBreak(encoder);
+      encodeQuotedPrintableLineBreak(output);
       i += 1;
       currentLineLength = 0;
     } else {
@@ -46,8 +62,8 @@ export function encodeAsTextQuotedPrintable(encoder: Encoder, input: Uint8Array)
           !(
             (
               i < inputLengthMinusTwo &&
-              input[i + 1] === 0x0d /* \r */ &&
-              input[i + 2] === 0x0a
+              inputBytes[i + 1] === 0x0d /* \r */ &&
+              inputBytes[i + 2] === 0x0a
             ) /* \n */
           ))
       ) {
@@ -74,8 +90,8 @@ export function encodeAsTextQuotedPrintable(encoder: Encoder, input: Uint8Array)
         i === inputLengthMinusOne ||
         /* is followed by a "meaningful line break"*/
         (i < inputLengthMinusTwo &&
-          input[i + 1] === 0x0d /* \r */ &&
-          input[i + 2] === 0x0a) /* \n */
+          inputBytes[i + 1] === 0x0d /* \r */ &&
+          inputBytes[i + 2] === 0x0a) /* \n */
           ? 0 /* if this is the last sequence, or it's followed by a "meaningful line break", then the "next" line break has a size of 0 */
           : 1;
 
@@ -85,65 +101,18 @@ export function encodeAsTextQuotedPrintable(encoder: Encoder, input: Uint8Array)
         QUOTED_PRINTABLE_MAX_LINE_LENGTH
       ) {
         // -> is safely writable
-        encoder.bytes(sequence.subarray(0, sequenceLength));
+        output.bytes(sequence.subarray(0, sequenceLength));
         currentLineLength += sequenceLength;
       } else {
         // -> writing this sequence AND a "line break" will exceed `maxLineLength`
         // thus, we have to end the current line and continue on a new one
         // for this, we introduce a "soft line break" and then write the sequence on the new line
-        encodeQuotedPrintableSoftLineBreak(encoder);
-        encoder.bytes(sequence.subarray(0, sequenceLength));
+        encodeQuotedPrintableSoftLineBreak(output);
+        output.bytes(sequence.subarray(0, sequenceLength));
         currentLineLength = sequenceLength;
       }
     }
   }
-}
 
-/* BINARY */
-
-export function encodeAsBinaryQuotedPrintable(encoder: Encoder, input: Uint8Array): void {
-  const inputLength: number = input.length;
-  let currentLineLength: number = 0;
-
-  for (let i: number = 0; i < inputLength; i++) {
-    const byte: number = input[i];
-
-    if (
-      /* test if writing this sequence AND a "soft line break" will exceed `maxLineLength` */
-      // currentLineLength + (i === lengthMinusOne /* is last */ ? 3 : 4) >
-      // maxLineLength
-      /* => optimized version => */
-      currentLineLength > QUOTED_PRINTABLE_MAX_LINE_LENGTH_MINUS_FOUR
-    ) {
-      // -> writing this sequence AND a "soft line break" will exceed `maxLineLength`
-      // thus, we have to end the current line and continue on a new one
-      // for this, we introduce a "soft line break"
-      encodeQuotedPrintableSoftLineBreak(encoder);
-      currentLineLength = 0;
-    }
-
-    encoder.uint8(0x3d /* = */);
-    encoder.uint8(numberToSingleAlphanumeric(byte >> 4, true));
-    encoder.uint8(numberToSingleAlphanumeric(byte & 0x0f, true));
-
-    currentLineLength += 3;
-  }
-}
-
-/*---*/
-
-const QUOTED_PRINTABLE_MAX_LINE_LENGTH: number = 76;
-
-const QUOTED_PRINTABLE_MAX_LINE_LENGTH_MINUS_FOUR: number = QUOTED_PRINTABLE_MAX_LINE_LENGTH - 4;
-
-/*---*/
-
-function encodeQuotedPrintableLineBreak(encoder: Encoder): void {
-  encoder.uint8(0x0d /* \r */);
-  encoder.uint8(0x0a /* \n */);
-}
-
-function encodeQuotedPrintableSoftLineBreak(encoder: Encoder): void {
-  encoder.uint8(0x3d /* = */);
-  encodeQuotedPrintableLineBreak(encoder);
+  return output;
 }

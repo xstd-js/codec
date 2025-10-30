@@ -11,7 +11,7 @@ export interface ConvertBase64StringToBytesOptions {
 }
 
 /**
- * Reads `length` chars represented as _base64_ format from `decoder`,
+ * Reads `length` chars represented as _base64_ format from `input`,
  * decodes them into the corresponding bytes, and writes the result into `output`.`
  *
  * @param {Decoder} input The `Decoder` to read from.
