@@ -954,7 +954,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/coverage-istanbul@npm:^5.1.0":
+"@vitest/coverage-istanbul@npm:^5.1.1":
   version: 5.1.1
   resolution: "@vitest/coverage-istanbul@npm:5.1.1"
   dependencies:
@@ -1045,13 +1045,13 @@ __metadata:
   dependencies:
     "@types/node": "npm:^26.6.6"
     "@typescript/native": "npm:typescript@^7.0.2"
-    "@vitest/coverage-istanbul": "npm:^5.1.0"
-    fabrique: "npm:2.0.37"
+    "@vitest/coverage-istanbul": "npm:^5.1.1"
+    fabrique: "npm:2.0.38"
     prettier: "npm:^3.10.1"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     typescript: "npm:typescript@~6.0.3"
     vite: "npm:^8.3.8"
-    vitest: "npm:^5.1.0"
+    vitest: "npm:^5.1.1"
   languageName: unknown
   linkType: soft
 
@@ -1297,9 +1297,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fabrique@npm:2.0.37":
-  version: 2.0.37
-  resolution: "fabrique@npm:2.0.37"
+"fabrique@npm:2.0.38":
+  version: 2.0.38
+  resolution: "fabrique@npm:2.0.38"
   dependencies:
     "@inquirer/prompts": "npm:^8.8.0"
     chalk: "npm:^6.0.1"
@@ -1307,7 +1307,7 @@ __metadata:
     zod: "npm:^4.6.7"
   bin:
     fabrique: src/cli/cli.js
-  checksum: 10c0/1e63d34e3e83b386017d8529a7a8925f81700afe364e8c68b866b936cd940ad9e9cf562931847a6fc322948c1b55819d9752a4c923b6b3e81fa7e34ff243285c
+  checksum: 10c0/21f137a6d11cd266bca095b53ce515026f813df43fef336e5224622ed8090db17c779f60d71d923bd1c99860415a3a1209fa4bad31a0eff7073779e3e9e941a2
   languageName: node
   linkType: hard
 
@@ -2375,7 +2375,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^5.1.0":
+"vitest@npm:^5.1.1":
   version: 5.1.1
   resolution: "vitest@npm:5.1.1"
   dependencies:

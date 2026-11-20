@@ -23,9 +23,6 @@
     "url": "git+https://github.com/xstd-js/codec.git"
   },
   "packageManager": "yarn@4.18.1",
-  "engines": {
-    "node": ">=24"
-  },
   "main": "./index.js",
   "scripts": {
     "=== FB: BUILD ===": "",
@@ -49,17 +46,20 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitest/coverage-istanbul": "^5.1.0",
-    "fabrique": "2.0.37",
+    "@vitest/coverage-istanbul": "^5.1.1",
+    "fabrique": "2.0.38",
     "prettier": "^3.10.1",
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "npm:typescript@~6.0.3",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "access": "public",
+  "engines": {
+    "node": ">=24"
+  },
   "fabrique": {
-    "version": "2.0.37",
+    "version": "2.0.38",
     "type": "lib"
   }
 }

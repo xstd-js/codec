@@ -165,3 +165,6 @@ dist
 
 # vitest output artifacts (json reports)
 .vitest/
+
+# agent
+docs/superpowers/

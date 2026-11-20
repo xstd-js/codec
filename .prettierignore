@@ -2,3 +2,4 @@
 # reformatted wholesale on skill updates; exempt from the package's format check
 .agents/
 docs/agents/
+docs/superpowers/
