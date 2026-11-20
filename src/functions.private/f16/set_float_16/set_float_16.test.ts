@@ -38,8 +38,9 @@ describe('set_float_16', () => {
 
     set_float_16(dataView, 0, -0, false);
 
-    expect(dataView.getUint8(0)).toBe(0x00);
-    expect(dataView.getUint8(1)).toBe(0x80);
+    // -0 bits 0x8000 -> big-endian bytes [0x80, 0x00]
+    expect(dataView.getUint8(0)).toBe(0x80);
+    expect(dataView.getUint8(1)).toBe(0x00);
   });
 
   it('should correctly write NaN to DataView', () => {
@@ -48,8 +49,9 @@ describe('set_float_16', () => {
 
     set_float_16(dataView, 0, NaN, false);
 
+    // canonical quiet NaN bits 0x7e00 -> big-endian bytes [0x7e, 0x00]
     expect(dataView.getUint8(0)).toBe(0x7e);
-    expect(dataView.getUint8(1)).toBe(0x01);
+    expect(dataView.getUint8(1)).toBe(0x00);
   });
 
   it('should correctly write positive infinity to DataView', () => {

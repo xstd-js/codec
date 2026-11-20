@@ -4,42 +4,66 @@ export function set_float_16(
   value: number,
   littleEndian: boolean = false,
 ): void {
-  let low: number, high: number;
+  // NOTE: the conversion reads the f64 bits and rounds them DIRECTLY to f16
+  // (single rounding): going through f32 would double-round values sitting
+  // within half an f32 ULP of an f16 rounding boundary.
 
-  if (Object.is(value, NaN)) {
-    low = 0x01;
-    high = 0x7e;
-  } else if (!Number.isFinite(value)) {
-    // -> ±Infinity (bits 0x7c00 / 0xfc00)
-    low = 0x00;
-    high = value < 0 ? 0xfc : 0x7c;
-  } else if (value === 0) {
-    low = Object.is(value, -0) ? 0x80 : 0x00;
-    high = 0x00;
-  } else {
-    const float32: Float32Array = new Float32Array([value]);
-    const int32: Uint32Array = new Uint32Array(float32.buffer);
+  const float64: Float64Array = new Float64Array([value]);
+  const int64: BigUint64Array = new BigUint64Array(float64.buffer);
 
-    const f32: number = int32[0];
-    const sign: number = (f32 >> 31) & 0x1;
-    let exponent: number = ((f32 >> 23) & 0xff) - 112;
-    const mantissa32: number = f32 & 0x007fffff;
-    let float16: number;
+  const f64: bigint = int64[0];
+  const sign: number = Number(f64 >> 63n);
+  const exponent64: number = Number((f64 >> 52n) & 0x7ffn);
+  const mantissa64: bigint = f64 & 0xfffffffffffffn;
+  let float16: number;
 
-    if (exponent < -10) {
-      // too small: rounds to zero (a tie at half the smallest subnormal rounds to even, i.e. zero)
-      float16 = sign << 15;
-    } else if (exponent > 30) {
-      // -> overflow: ±Infinity (bits 0x7c00 / 0xfc00)
+  if (exponent64 === 0x7ff) {
+    if (mantissa64 === 0n) {
+      // -> ±Infinity (bits 0x7c00 / 0xfc00)
       float16 = (sign << 15) | 0x7c00;
-    } else if (exponent <= 0) {
-      // -> subnormal: round-to-nearest-even the implicit-bit mantissa on its dropped bits
-      const shift: number = 14 - exponent; /* [14, 24] */
-      const combined: number = 0x800000 /* implicit bit */ | mantissa32;
-      const half: number = 1 << (shift - 1);
+    } else {
+      // -> canonical quiet NaN, sign preserved (bits 0x7e00 / 0xfe00)
+      float16 = (sign << 15) | 0x7e00;
+    }
+  } else if (exponent64 === 0) {
+    // -> f64 zero or subnormal: rounds to (signed) zero
+    float16 = sign << 15;
+  } else {
+    // finite non-zero: value = combined * 2^(exponent - 52) with the implicit bit
+    let exponent: number = exponent64 - 1023;
+    const combined: bigint = (1n << 52n) | mantissa64;
 
-      let mantissa: number = combined >> shift;
-      const dropped: number = combined & ((1 << shift) - 1);
+    if (exponent >= -14) {
+      // -> normal (or overflow): round-to-nearest-even on the 42 dropped bits
+      let mantissa: number = Number(combined >> 42n); /* 11 bits: implicit + 10 */
+      const dropped: bigint = combined & ((1n << 42n) - 1n);
+      const half: bigint = 1n << 41n;
+
+      if (dropped > half || (dropped === half && (mantissa & 1) === 1)) {
+        mantissa++;
+      }
+
+      if (mantissa > 0x7ff) {
+        // -> the rounding carried into the exponent
+        mantissa = 0x400;
+        exponent++;
+      }
+
+      const exponent16: number = exponent + 15;
+
+      if (exponent16 > 30) {
+        // -> rounded into overflow: ±Infinity (bits 0x7c00 / 0xfc00)
+        float16 = (sign << 15) | 0x7c00;
+      } else {
+        float16 = (sign << 15) | (exponent16 << 10) | (mantissa & 0x3ff);
+      }
+    } else {
+      // -> subnormal (or zero): round-to-nearest-even on the (28 - exponent) dropped bits
+      const shift: number = 28 - exponent; /* >= 43 */
+      const half: bigint = 1n << BigInt(shift - 1);
+
+      let mantissa: number = Number(combined >> BigInt(shift));
+      const dropped: bigint = combined & ((1n << BigInt(shift)) - 1n);
 
       if (dropped > half || (dropped === half && (mantissa & 1) === 1)) {
         mantissa++;
@@ -51,32 +75,11 @@ export function set_float_16(
       } else {
         float16 = (sign << 15) | mantissa;
       }
-    } else {
-      // -> normal: round-to-nearest-even the mantissa on its 13 dropped bits
-      let mantissa: number = mantissa32 >> 13;
-      const dropped: number = mantissa32 & 0x1fff;
-
-      if (dropped > 0x1000 || (dropped === 0x1000 && (mantissa & 1) === 1)) {
-        mantissa++;
-      }
-
-      if (mantissa > 0x3ff) {
-        // -> the rounding carried into the exponent
-        mantissa = 0;
-        exponent++;
-      }
-
-      if (exponent > 30) {
-        // -> rounded into overflow: ±Infinity (bits 0x7c00 / 0xfc00)
-        float16 = (sign << 15) | 0x7c00;
-      } else {
-        float16 = (sign << 15) | ((exponent & 0x1f) << 10) | mantissa;
-      }
     }
-
-    low = float16 & 0xff;
-    high = (float16 >> 8) & 0xff;
   }
+
+  const low: number = float16 & 0xff;
+  const high: number = (float16 >> 8) & 0xff;
 
   if (littleEndian) {
     view.setUint8(byteOffset, low);
