@@ -33,7 +33,7 @@ export function set_float_16(
       high = 0x00;
     } else {
       if (exponent <= 0) {
-        mantissa = (mantissa | 0x0800) >> (1 - exponent);
+        mantissa = (mantissa | 0x0400 /* implicit bit: 0x800000 >> 13 */) >> (1 - exponent);
         exponent = 0;
       }
 

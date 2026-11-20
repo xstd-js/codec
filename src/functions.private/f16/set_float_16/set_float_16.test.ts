@@ -92,13 +92,24 @@ describe('set_float_16', () => {
     expect(dataView.getUint8(1)).toBe(0x7e);
   });
 
+  it('should encode the subnormal 2^-15 as 0x0200 (mantissa 512)', () => {
+    const buffer = new ArrayBuffer(2);
+    const dataView = new DataView(buffer);
+
+    set_float_16(dataView, 0, 2 ** -15, false);
+
+    // 2^-15 = 0.5 * 2^-14 -> subnormal mantissa of 512 -> bits 0x0200
+    expect(dataView.getUint16(0, false)).toBe(0x0200);
+  });
+
   it('should correctly support values near zero', () => {
     const buffer = new ArrayBuffer(2);
     const dataView = new DataView(buffer);
 
     set_float_16(dataView, 0, 1e-6, false);
 
+    // 1e-6 -> subnormal mantissa of 16 (truncated from 16.78)
     expect(dataView.getUint8(0)).toBe(0x00);
-    expect(dataView.getUint8(1)).toBe(0x20);
+    expect(dataView.getUint8(1)).toBe(0x10);
   });
 });
