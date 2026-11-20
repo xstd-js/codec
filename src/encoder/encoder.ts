@@ -11,7 +11,7 @@ export interface EncoderOptions {
   /**
    * The _initial_ allocated byte length
    *
-   * - _range_: `[0, 0x100000000]`
+   * - _range_: `[0, 0x100000000]` — values out of this range, or non-safe-integers, throw a `RangeError`.
    *
    * @default 0x100
    */
@@ -20,7 +20,7 @@ export interface EncoderOptions {
   /**
    * The _max_ allocated byte length
    *
-   * - _range_: `[initialByteLength, 0x100000000]`
+   * - _range_: `[initialByteLength, 0x100000000]` — values out of this range, or non-safe-integers, throw a `RangeError`.
    *
    * @default 0x100000000
    */
@@ -103,8 +103,21 @@ export class Encoder {
   #cursor: number;
 
   constructor({ initialByteLength = 0x100, maxByteLength = 0x100000000 }: EncoderOptions = {}) {
-    initialByteLength = Math.max(0, Math.min(0x100000000, Math.floor(initialByteLength)));
-    maxByteLength = Math.max(initialByteLength, Math.min(0x100000000, Math.floor(maxByteLength)));
+    if (
+      !Number.isSafeInteger(initialByteLength) ||
+      initialByteLength < 0 ||
+      initialByteLength > 0x100000000
+    ) {
+      throw new RangeError(`Invalid initialByteLength: ${initialByteLength}.`);
+    }
+
+    if (
+      !Number.isSafeInteger(maxByteLength) ||
+      maxByteLength < initialByteLength ||
+      maxByteLength > 0x100000000
+    ) {
+      throw new RangeError(`Invalid maxByteLength: ${maxByteLength}.`);
+    }
 
     this.#buffer = new ArrayBuffer(initialByteLength, {
       maxByteLength,

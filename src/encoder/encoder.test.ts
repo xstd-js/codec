@@ -13,6 +13,35 @@ describe('Encoder', () => {
     expect(bytes).toEqual(new Uint8Array([3, 0, 97, 98, 99]));
   });
 
+  describe('constructor', () => {
+    test('rejects invalid initialByteLength', () => {
+      expect(() => new Encoder({ initialByteLength: -1 })).toThrow(
+        'Invalid initialByteLength: -1.',
+      );
+      expect(() => new Encoder({ initialByteLength: 0.5 })).toThrow(
+        'Invalid initialByteLength: 0.5.',
+      );
+      expect(() => new Encoder({ initialByteLength: 0x100000001 })).toThrow(
+        'Invalid initialByteLength: 4294967297.',
+      );
+      expect(() => new Encoder({ initialByteLength: NaN })).toThrow(
+        'Invalid initialByteLength: NaN.',
+      );
+    });
+
+    test('rejects invalid maxByteLength', () => {
+      expect(() => new Encoder({ initialByteLength: 8, maxByteLength: 4 })).toThrow(
+        'Invalid maxByteLength: 4.',
+      );
+      expect(() => new Encoder({ maxByteLength: 0x100000001 })).toThrow(
+        'Invalid maxByteLength: 4294967297.',
+      );
+      expect(() => new Encoder({ maxByteLength: Infinity })).toThrow(
+        'Invalid maxByteLength: Infinity.',
+      );
+    });
+  });
+
   describe('static methods', () => {
     describe('encode', () => {
       it('should be able to encode a binary string', () => {
