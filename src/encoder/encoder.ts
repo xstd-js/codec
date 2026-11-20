@@ -1,5 +1,4 @@
 import { Decoder } from '../decoder/decoder.js';
-import { set_float_16 } from '../functions.private/f16/set_float_16/set_float_16.js';
 import { computeGrownByteLength } from './helpers.private/compute-grown-byte-length/compute-grown-byte-length.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
@@ -290,13 +289,7 @@ export class Encoder {
   }
 
   #float16(value: number, littleEndian: boolean): this {
-    /* istanbul ignore if -- @preserve */
-    if (this.#view.setFloat16 === undefined) {
-      set_float_16(this.#view, this.#alloc(2), value, littleEndian);
-      /* istanbul ignore else -- @preserve */
-    } else {
-      this.#view.setFloat16(this.#alloc(2), value, littleEndian);
-    }
+    this.#view.setFloat16(this.#alloc(2), value, littleEndian);
     return this;
   }
 

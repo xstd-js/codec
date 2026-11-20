@@ -1,4 +1,3 @@
-import { get_float_16 } from '../functions.private/f16/get_float_16/get_float_16.js';
 import { type DecodeFunction } from './types/decode-function.js';
 import { type DecoderStringOptions } from './types/methods/string/decoder-string-options.js';
 
@@ -218,13 +217,7 @@ export class Decoder {
   }
 
   #float16(littleEndian: boolean): number {
-    /* istanbul ignore if -- @preserve */
-    if (this.#view.getFloat16 === undefined) {
-      return get_float_16(this.#view, this.#consume(2), littleEndian);
-      /* istanbul ignore else -- @preserve */
-    } else {
-      return this.#view.getFloat16(this.#consume(2), littleEndian);
-    }
+    return this.#view.getFloat16(this.#consume(2), littleEndian);
   }
 
   float16LE(): number {
