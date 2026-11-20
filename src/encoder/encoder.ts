@@ -1,5 +1,9 @@
 import { Decoder } from '../decoder/decoder.js';
 import { computeGrownByteLength } from './helpers.private/compute-grown-byte-length/compute-grown-byte-length.js';
+import { encodeIntXBE } from './extra/number/signed/int-x.private/encode-int-x-b-e/encode-int-x-b-e.js';
+import { encodeIntXLE } from './extra/number/signed/int-x.private/encode-int-x-l-e/encode-int-x-l-e.js';
+import { encodeUintXBE } from './extra/number/unsigned/uint-x.private/encode-uint-x-b-e/encode-uint-x-b-e.js';
+import { encodeUintXLE } from './extra/number/unsigned/uint-x.private/encode-uint-x-l-e/encode-uint-x-l-e.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
 
@@ -286,6 +290,134 @@ export class Encoder {
 
   uint64BE(value: bigint | number): this {
     return this.#uint64(value, false);
+  }
+
+  /**
+   * Writes a `uint24` represented as _little-endian_ in this Encoder.
+   */
+  uint24LE(value: number): this {
+    encodeUintXLE(this, value, 3);
+    return this;
+  }
+
+  /**
+   * Writes a `uint24` represented as _big-endian_ in this Encoder.
+   */
+  uint24BE(value: number): this {
+    encodeUintXBE(this, value, 3);
+    return this;
+  }
+
+  /**
+   * Writes a `uint40` represented as _little-endian_ in this Encoder.
+   */
+  uint40LE(value: number): this {
+    encodeUintXLE(this, value, 5);
+    return this;
+  }
+
+  /**
+   * Writes a `uint40` represented as _big-endian_ in this Encoder.
+   */
+  uint40BE(value: number): this {
+    encodeUintXBE(this, value, 5);
+    return this;
+  }
+
+  /**
+   * Writes a `uint48` represented as _little-endian_ in this Encoder.
+   */
+  uint48LE(value: number): this {
+    encodeUintXLE(this, value, 6);
+    return this;
+  }
+
+  /**
+   * Writes a `uint48` represented as _big-endian_ in this Encoder.
+   */
+  uint48BE(value: number): this {
+    encodeUintXBE(this, value, 6);
+    return this;
+  }
+
+  /**
+   * Writes a `uint56` represented as _little-endian_ in this Encoder.
+   */
+  uint56LE(value: bigint | number): this {
+    encodeUintXLE(this, value, 7);
+    return this;
+  }
+
+  /**
+   * Writes a `uint56` represented as _big-endian_ in this Encoder.
+   */
+  uint56BE(value: bigint | number): this {
+    encodeUintXBE(this, value, 7);
+    return this;
+  }
+
+  /**
+   * Writes an `int24` represented as _little-endian_ in this Encoder.
+   */
+  int24LE(value: number): this {
+    encodeIntXLE(this, value, 3);
+    return this;
+  }
+
+  /**
+   * Writes an `int24` represented as _big-endian_ in this Encoder.
+   */
+  int24BE(value: number): this {
+    encodeIntXBE(this, value, 3);
+    return this;
+  }
+
+  /**
+   * Writes an `int40` represented as _little-endian_ in this Encoder.
+   */
+  int40LE(value: number): this {
+    encodeIntXLE(this, value, 5);
+    return this;
+  }
+
+  /**
+   * Writes an `int40` represented as _big-endian_ in this Encoder.
+   */
+  int40BE(value: number): this {
+    encodeIntXBE(this, value, 5);
+    return this;
+  }
+
+  /**
+   * Writes an `int48` represented as _little-endian_ in this Encoder.
+   */
+  int48LE(value: number): this {
+    encodeIntXLE(this, value, 6);
+    return this;
+  }
+
+  /**
+   * Writes an `int48` represented as _big-endian_ in this Encoder.
+   */
+  int48BE(value: number): this {
+    encodeIntXBE(this, value, 6);
+    return this;
+  }
+
+  /**
+   * Writes an `int56` represented as _little-endian_ in this Encoder.
+   */
+  int56LE(value: bigint | number): this {
+    encodeIntXLE(this, value, 7);
+    return this;
+  }
+
+  /**
+   * Writes an `int56` represented as _big-endian_ in this Encoder.
+   */
+  int56BE(value: bigint | number): this {
+    encodeIntXBE(this, value, 7);
+    return this;
   }
 
   #float16(value: number, littleEndian: boolean): this {

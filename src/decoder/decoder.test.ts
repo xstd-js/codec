@@ -182,6 +182,74 @@ describe('Decoder', () => {
         });
       });
 
+      describe('extra widths', () => {
+        test('uint24LE', () => {
+          const decoder = new Decoder(new Uint8Array([0x56, 0x34, 0x12]));
+          expect(decoder.uint24LE()).toBe(0x123456);
+          expect(decoder.consumed).toBe(3);
+        });
+
+        test('uint24BE', () => {
+          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56])).uint24BE()).toBe(0x123456);
+        });
+
+        test('uint40LE', () => {
+          expect(new Decoder(new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12])).uint40LE()).toBe(0x1234567890);
+        });
+
+        test('uint40BE', () => {
+          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90])).uint40BE()).toBe(0x1234567890);
+        });
+
+        test('uint48LE', () => {
+          expect(new Decoder(new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12])).uint48LE()).toBe(0x1234567890ab);
+        });
+
+        test('uint48BE', () => {
+          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab])).uint48BE()).toBe(0x1234567890ab);
+        });
+
+        test('uint56LE', () => {
+          expect(new Decoder(new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12])).uint56LE()).toBe(0x1234567890abcdn);
+        });
+
+        test('uint56BE', () => {
+          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd])).uint56BE()).toBe(0x1234567890abcdn);
+        });
+
+        test('int24LE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff])).int24LE()).toBe(-1);
+        });
+
+        test('int24BE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff])).int24BE()).toBe(-1);
+        });
+
+        test('int40LE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])).int40LE()).toBe(-1);
+        });
+
+        test('int40BE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])).int40BE()).toBe(-1);
+        });
+
+        test('int48LE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int48LE()).toBe(-1);
+        });
+
+        test('int48BE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int48BE()).toBe(-1);
+        });
+
+        test('int56LE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int56LE()).toBe(-1n);
+        });
+
+        test('int56BE', () => {
+          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int56BE()).toBe(-1n);
+        });
+      });
+
       describe('float16', () => {
         test('float16LE', () => {
           const decoder = new Decoder(new Uint8Array([0x66, 0x2e]));
