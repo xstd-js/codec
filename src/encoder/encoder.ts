@@ -619,13 +619,23 @@ export class Encoder {
 
   /**
    * Stringify `value` using `JSON.stringify(...)` and writes the result in this Encoder.
+   *
+   * > **INFO:** throws an `Error` when `JSON.stringify(...)` returns `undefined`
+   * (e.g. for a top-level `undefined`, function or symbol), instead of writing
+   * nothing.
    */
   json(
     value: any,
     replacer?: (this: any, key: string, value: any) => any,
     space?: string | number,
   ): this {
-    return this.string(JSON.stringify(value, replacer, space));
+    const json: string | undefined = JSON.stringify(value, replacer, space);
+
+    if (json === undefined) {
+      throw new Error('Cannot encode value: JSON.stringify returned undefined.');
+    }
+
+    return this.string(json);
   }
 
   /**

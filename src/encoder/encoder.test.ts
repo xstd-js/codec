@@ -839,6 +839,14 @@ describe('Encoder', () => {
         a.a = a;
         expect(() => new Encoder().json(a).toUint8Array()).toThrow();
       });
+
+      test('value that JSON.stringify cannot represent', () => {
+        const encoder = new Encoder();
+        expect(() => encoder.json(undefined)).toThrow(
+          'Cannot encode value: JSON.stringify returned undefined.',
+        );
+        expect(encoder.length).toBe(0);
+      });
     });
 
     describe('iterable', () => {
