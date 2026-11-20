@@ -23,7 +23,8 @@ describe('convertBytesToBase64String', () => {
     expect(convert('foob')).toBe('Zm9vYg==');
   });
 
-  test('[0-0xffff]', () => {
+  // INFO: exhaustive 0-0xffff loop, slow on CI runners.
+  test('[0-0xffff]', { timeout: 30000 }, () => {
     const toBinaryString = (value: number): string => {
       let output: string = '';
 
