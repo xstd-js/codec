@@ -40,6 +40,10 @@ describe('Encoder', () => {
         'Invalid maxByteLength: Infinity.',
       );
     });
+
+    test('accepts the inclusive upper bound', () => {
+      expect(() => new Encoder({ maxByteLength: 0x100000000 })).not.toThrow();
+    });
   });
 
   describe('static methods', () => {
@@ -511,6 +515,7 @@ describe('Encoder', () => {
           expect(encoder.length).toBe(8);
         });
       });
+
       describe('wrapping', () => {
         test('wraps unsigned integer writes with DataView semantics', () => {
           expect(new Encoder().uint8(300).toUint8Array()).toEqual(new Uint8Array([0x2c]));
