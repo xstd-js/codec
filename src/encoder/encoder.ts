@@ -211,7 +211,7 @@ export class Encoder {
     return this.#int16(value, false);
   }
 
-  #encodeX(value: bigint | number, bytes: number, littleEndian: boolean): void {
+  #encodeUintX(value: bigint | number, bytes: number, littleEndian: boolean): void {
     const dataView: DataView = getShared64bDataView();
 
     // NOTE: `BigInt.asUintN` makes the two's complement wrap deterministic:
@@ -230,7 +230,7 @@ export class Encoder {
   }
 
   #int24(value: number, littleEndian: boolean): this {
-    this.#encodeX(value, 3, littleEndian);
+    this.#encodeUintX(value, 3, littleEndian);
     return this;
   }
 
@@ -262,7 +262,7 @@ export class Encoder {
   }
 
   #int40(value: number, littleEndian: boolean): this {
-    this.#encodeX(value, 5, littleEndian);
+    this.#encodeUintX(value, 5, littleEndian);
     return this;
   }
 
@@ -281,7 +281,7 @@ export class Encoder {
   }
 
   #int48(value: number, littleEndian: boolean): this {
-    this.#encodeX(value, 6, littleEndian);
+    this.#encodeUintX(value, 6, littleEndian);
     return this;
   }
 
@@ -300,7 +300,7 @@ export class Encoder {
   }
 
   #int56(value: bigint | number, littleEndian: boolean): this {
-    this.#encodeX(value, 7, littleEndian);
+    this.#encodeUintX(value, 7, littleEndian);
     return this;
   }
 
@@ -354,7 +354,7 @@ export class Encoder {
   }
 
   #uint24(value: number, littleEndian: boolean): this {
-    this.#encodeX(value, 3, littleEndian);
+    this.#encodeUintX(value, 3, littleEndian);
     return this;
   }
 
@@ -386,7 +386,7 @@ export class Encoder {
   }
 
   #uint40(value: number, littleEndian: boolean): this {
-    this.#encodeX(value, 5, littleEndian);
+    this.#encodeUintX(value, 5, littleEndian);
     return this;
   }
 
@@ -405,7 +405,7 @@ export class Encoder {
   }
 
   #uint48(value: number, littleEndian: boolean): this {
-    this.#encodeX(value, 6, littleEndian);
+    this.#encodeUintX(value, 6, littleEndian);
     return this;
   }
 
@@ -424,7 +424,7 @@ export class Encoder {
   }
 
   #uint56(value: bigint | number, littleEndian: boolean): this {
-    this.#encodeX(value, 7, littleEndian);
+    this.#encodeUintX(value, 7, littleEndian);
     return this;
   }
 
