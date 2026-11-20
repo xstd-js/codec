@@ -58,6 +58,9 @@ export function convertBytesToTextQuotedPrintableString<GOutput extends Encoder>
       if (
         isSafeQuotedPrintableChar(byte) ||
         (isTabOrSpace(byte) &&
+          /* not the last byte of the input (RFC 2045 rule #3: a TAB/SPACE must
+             not terminate an encoded line, a decoder would strip it) */
+          i !== inputLengthMinusOne &&
           /* not followed by a line break */
           !(
             (
