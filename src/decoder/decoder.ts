@@ -66,6 +66,10 @@ export class Decoder {
    * Consumes `size` bytes.
    */
   #consume(size: number): number {
+    if (!Number.isSafeInteger(size) || size < 0) {
+      throw new RangeError(`Invalid size: ${size}.`);
+    }
+
     const cursor: number = this.#cursor;
     const newCursor: number = cursor + size;
 

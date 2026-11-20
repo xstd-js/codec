@@ -237,6 +237,20 @@ describe('Decoder', () => {
         expect(decoder.bytes()).toEqual(new Uint8Array([0, 1]));
         expect(decoder.consumed).toBe(2);
       });
+
+      test('a negative length throws and leaves the state untouched', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2, 3]));
+
+        expect(() => decoder.bytes(-1)).toThrow();
+        expect(decoder.consumed).toBe(0);
+      });
+
+      test('a non-integer length throws and leaves the state untouched', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2, 3]));
+
+        expect(() => decoder.bytes(1.5)).toThrow();
+        expect(decoder.consumed).toBe(0);
+      });
     });
 
     describe('string', () => {
