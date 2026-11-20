@@ -84,6 +84,16 @@ describe('set_float_16', () => {
     expect(dataView.getUint16(0, false)).toBe(0x7c00);
   });
 
+  it('should round to nearest-even like native float16 conversions', () => {
+    const buffer = new ArrayBuffer(2);
+    const dataView = new DataView(buffer);
+
+    // 1 + 3 * 2^-12: mantissa fraction is 0.75 ULP -> rounds up to 0x3c01
+    set_float_16(dataView, 0, 1.000732421875, false);
+
+    expect(dataView.getUint16(0, false)).toBe(0x3c01);
+  });
+
   it('should correctly handle values smaller than the smallest subnormal float16', () => {
     const buffer = new ArrayBuffer(2);
     const dataView = new DataView(buffer);
@@ -121,8 +131,8 @@ describe('set_float_16', () => {
 
     set_float_16(dataView, 0, 1e-6, false);
 
-    // 1e-6 -> subnormal mantissa of 16 (truncated from 16.78)
+    // 1e-6 -> subnormal mantissa of 17 (16.78 rounded to nearest)
     expect(dataView.getUint8(0)).toBe(0x00);
-    expect(dataView.getUint8(1)).toBe(0x10);
+    expect(dataView.getUint8(1)).toBe(0x11);
   });
 });
