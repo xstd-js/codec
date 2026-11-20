@@ -510,68 +510,6 @@ export class Encoder {
     return this;
   }
 
-  // arrayBufferView(
-  //   value:
-  //     | Uint8Array
-  //     | Uint16Array
-  //     | Uint32Array
-  //     | BigUint64Array
-  //     | Int8Array
-  //     | Int16Array
-  //     | Int32Array
-  //     | BigInt64Array
-  //     | Float16Array
-  //     | Float32Array
-  //     | Float64Array,
-  //   littleEndian: boolean = this.#littleEndian,
-  // ): void {
-  //   if (value instanceof Uint8Array) {
-  //     this.bytes(value);
-  //   } else {
-  //     if (value instanceof Int8Array || isLittleEndianPlatform() === littleEndian) {
-  //       this.bytes(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
-  //     } else {
-  //       if (value instanceof Uint16Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.uint16(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Uint32Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.uint32(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof BigUint64Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.uint64(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Int16Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.int16(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Int32Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.int32(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof BigInt64Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.int64(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Float16Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.float16(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Float32Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.float32(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Float64Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.float64(value[i], littleEndian);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
   /**
    * Writes a `string` in this Encoder.
    *

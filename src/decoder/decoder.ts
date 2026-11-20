@@ -111,24 +111,6 @@ export class Decoder {
     return this.#cursor === this.#bytes.length;
   }
 
-  // toUint8Array(): Uint8Array {
-  //   return new Uint8Array(this.#bytes.buffer, this.#bytes.byteOffset, this.#cursor);
-  // }
-  //
-  // complete(): void {
-  //   if (this.#cursor !== this.#bytes.length) {
-  //     throw new Error(`${this.#bytes.length - this.#cursor} bytes remaining.`);
-  //   }
-  // }
-
-  // decode<GReturn>(decode: DecodeFunction<GReturn>): GReturn {
-  //   return decode(this);
-  // }
-
-  // fork(length: number = this.remaining): Decoder {
-  //   return new Decoder(this.#bytes.subarray(this.#cursor, this.#cursor + Math.max(0, length)));
-  // }
-
   /**
    * Reads an `int8` from this Decoder, and moves the cursor of 1 byte for the next _read_
    */
@@ -479,26 +461,4 @@ export class Decoder {
   ): GValue {
     return JSON.parse(this.string(length), reviver);
   }
-
-  // /**
-  //  * Decodes an array of values.
-  //  *
-  //  * @param length
-  //  * @param decode
-  //  */
-  // iterable<GValue>(length: number = this.remaining, decode: DecodeFunction<GValue>): GValue[] {
-  //   const values: GValue[] = [];
-  //   const end: number = this.#cursor + length;
-  //   while (this.#cursor < end) {
-  //     values.push(decode(this));
-  //   }
-  //
-  //   if (this.#cursor !== end) {
-  //     throw new Error(
-  //       `Expected to decode ${length} bytes, but ${this.#cursor - end} where decoded instead (+${this.#cursor - end - length}).`,
-  //     );
-  //   }
-  //
-  //   return values;
-  // }
 }
