@@ -58,8 +58,9 @@ describe('set_float_16', () => {
 
     set_float_16(dataView, 0, Infinity, false);
 
-    expect(dataView.getUint8(0)).toBe(0x00);
-    expect(dataView.getUint8(1)).toBe(0x7c);
+    // +Infinity bits 0x7c00 -> big-endian bytes [0x7c, 0x00]
+    expect(dataView.getUint8(0)).toBe(0x7c);
+    expect(dataView.getUint8(1)).toBe(0x00);
   });
 
   it('should correctly write negative infinity to DataView', () => {
@@ -68,8 +69,9 @@ describe('set_float_16', () => {
 
     set_float_16(dataView, 0, -Infinity, false);
 
-    expect(dataView.getUint8(0)).toBe(0x00);
-    expect(dataView.getUint8(1)).toBe(0xfc);
+    // -Infinity bits 0xfc00 -> big-endian bytes [0xfc, 0x00]
+    expect(dataView.getUint8(0)).toBe(0xfc);
+    expect(dataView.getUint8(1)).toBe(0x00);
   });
 
   it('should encode values larger than the largest float16 as positive infinity', () => {

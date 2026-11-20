@@ -10,8 +10,9 @@ export function set_float_16(
     low = 0x01;
     high = 0x7e;
   } else if (!Number.isFinite(value)) {
-    low = value < 0 ? 0xfc : 0x7c;
-    high = 0x00;
+    // -> ±Infinity (bits 0x7c00 / 0xfc00)
+    low = 0x00;
+    high = value < 0 ? 0xfc : 0x7c;
   } else if (value === 0) {
     low = Object.is(value, -0) ? 0x80 : 0x00;
     high = 0x00;
