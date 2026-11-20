@@ -111,14 +111,13 @@ bytes, then encoding those bytes as quoted-printable chars:
 import {
   convertBase64StringToBytes,
   convertBytesToQuotedPrintableString,
-  Decoder,
   Encoder,
 } from '@xstd/codec';
 
 // base64 chars -> raw bytes -> quoted-printable chars
 const quotedPrintableChars: Uint8Array = convertBytesToQuotedPrintableString(
   convertBase64StringToBytes(
-    new Decoder(new TextEncoder().encode('SGVsbG8=')), // in: base64 chars
+    new Encoder().string('SGVsbG8=').toDecoder(), // in: base64 chars
     new Encoder(), // out: raw bytes
   ).toDecoder(),
   new Encoder(), // out: quoted-printable chars
