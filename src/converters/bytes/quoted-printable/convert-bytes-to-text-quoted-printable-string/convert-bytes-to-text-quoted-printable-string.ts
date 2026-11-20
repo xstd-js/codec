@@ -63,11 +63,9 @@ export function convertBytesToTextQuotedPrintableString<GOutput extends Encoder>
           i !== inputLengthMinusOne &&
           /* not followed by a line break */
           !(
-            (
-              i < inputLengthMinusTwo &&
-              inputBytes[i + 1] === 0x0d /* \r */ &&
-              inputBytes[i + 2] === 0x0a
-            ) /* \n */
+            i < inputLengthMinusTwo &&
+            inputBytes[i + 1] === 0x0d /* \r */ &&
+            inputBytes[i + 2] === 0x0a /* \n */
           ))
       ) {
         sequence[0] = byte;
@@ -75,7 +73,7 @@ export function convertBytesToTextQuotedPrintableString<GOutput extends Encoder>
       } else {
         // -> `byte` is NOT safe
         // -> `byte` must be encoded
-        sequence[0] = 0x3d /* = */;
+        sequence[0] = 0x3d; /* = */
         sequence[1] = numberToSingleAlphanumeric(byte >> 4, true);
         sequence[2] = numberToSingleAlphanumeric(byte & 0x0f, true);
         sequenceLength = 3;

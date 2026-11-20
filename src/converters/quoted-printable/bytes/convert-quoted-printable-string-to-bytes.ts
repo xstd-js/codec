@@ -53,8 +53,8 @@ export function convertQuotedPrintableStringToBytes<GOutput extends Encoder>(
 
       outputLength = removeQuotedPrintableTrailingWhiteSpaces(outputBytes, outputLength);
 
-      outputBytes[outputLength++] = 0x0d /* \r */;
-      outputBytes[outputLength++] = 0x0a /* \n */;
+      outputBytes[outputLength++] = 0x0d; /* \r */
+      outputBytes[outputLength++] = 0x0a; /* \n */
     } else {
       outputBytes[outputLength++] = byte;
     }
