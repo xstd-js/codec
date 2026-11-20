@@ -240,11 +240,12 @@ export class Encoder {
   }
 
   #encodeUintX(value: bigint | number, bytes: number, littleEndian: boolean): void {
-    const start: number = this.#alloc(bytes);
-
     // NOTE: `BigInt.asUintN` makes the two's complement wrap deterministic:
     // `DataView.setBigUint64` itself rejects negative BigInts on some engines.
+    // NOTE: the conversion runs *before* the allocation so that a failed
+    // conversion (e.g. a non-integer number) leaves the cursor untouched.
     const packed: bigint = BigInt.asUintN(64, BigInt(value));
+    const start: number = this.#alloc(bytes);
 
     for (let i: number = 0; i < bytes; i++) {
       const shift: bigint = BigInt(littleEndian ? i : bytes - 1 - i) * 8n;
@@ -348,11 +349,11 @@ export class Encoder {
   }
 
   #int64(value: bigint | number, littleEndian: boolean): this {
-    this.#view.setBigInt64(
-      this.#alloc(8),
-      typeof value === 'number' ? BigInt(value) : value,
-      littleEndian,
-    );
+    // NOTE: the conversion runs *before* the allocation so that a failed
+    // conversion (e.g. a non-integer number) leaves the cursor untouched.
+    const bigIntValue: bigint = typeof value === 'number' ? BigInt(value) : value;
+
+    this.#view.setBigInt64(this.#alloc(8), bigIntValue, littleEndian);
     return this;
   }
 
@@ -493,11 +494,11 @@ export class Encoder {
   }
 
   #uint64(value: bigint | number, littleEndian: boolean): this {
-    this.#view.setBigUint64(
-      this.#alloc(8),
-      typeof value === 'number' ? BigInt(value) : value,
-      littleEndian,
-    );
+    // NOTE: the conversion runs *before* the allocation so that a failed
+    // conversion (e.g. a non-integer number) leaves the cursor untouched.
+    const bigIntValue: bigint = typeof value === 'number' ? BigInt(value) : value;
+
+    this.#view.setBigUint64(this.#alloc(8), bigIntValue, littleEndian);
     return this;
   }
 

@@ -133,6 +133,30 @@ describe('Encoder', () => {
         expect(encoder.length).toBe(4);
         expect(encoder.toUint8Array()).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
       });
+
+      test('failed int24 write (non-integer) leaves no partial bytes', () => {
+        const encoder = new Encoder();
+        encoder.uint8(0xaa);
+        expect(() => encoder.int24LE(1.5)).toThrow(RangeError);
+        expect(encoder.length).toBe(1);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0xaa]));
+      });
+
+      test('failed int64 write (non-integer) leaves no partial bytes', () => {
+        const encoder = new Encoder();
+        encoder.uint8(0xaa);
+        expect(() => encoder.int64LE(1.5)).toThrow(RangeError);
+        expect(encoder.length).toBe(1);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0xaa]));
+      });
+
+      test('failed uint64 write (non-integer) leaves no partial bytes', () => {
+        const encoder = new Encoder();
+        encoder.uint8(0xaa);
+        expect(() => encoder.uint64LE(1.5)).toThrow(RangeError);
+        expect(encoder.length).toBe(1);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0xaa]));
+      });
     });
 
     describe('encode', () => {
