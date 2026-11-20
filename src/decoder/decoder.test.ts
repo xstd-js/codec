@@ -548,5 +548,34 @@ describe('Decoder', () => {
         expect(() => new Decoder(new Uint8Array([123])).json()).toThrow();
       });
     });
+
+    describe('toUint8Array', () => {
+      test('returns a live view over the consumed bytes', () => {
+        const bytes = new Uint8Array([1, 2, 3, 4]);
+        const decoder = new Decoder(bytes);
+        decoder.uint16LE();
+        const view = decoder.toUint8Array();
+        expect(view).toEqual(new Uint8Array([1, 2]));
+        view[0] = 9;
+        expect(bytes[0]).toBe(9);
+      });
+    });
+
+    describe('complete', () => {
+      test('throws while bytes remain, passes once done', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2]));
+        decoder.uint8();
+        expect(() => decoder.complete()).toThrow('1 bytes remaining.');
+        decoder.uint8();
+        expect(() => decoder.complete()).not.toThrow();
+      });
+    });
+
+    describe('decode', () => {
+      test('decodes with the provided function', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2]));
+        expect(decoder.decode((d: Decoder): number => d.uint16LE())).toBe(0x0201);
+      });
+    });
   });
 });

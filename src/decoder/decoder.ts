@@ -25,10 +25,8 @@ export class Decoder {
    */
   static decode<GReturn>(bytes: Uint8Array, decode: DecodeFunction<GReturn>): GReturn {
     const decoder: Decoder = new Decoder(bytes);
-    const result: GReturn = decode(decoder);
-    if (!decoder.done) {
-      throw new Error(`${decoder.remaining} bytes remaining.`);
-    }
+    const result: GReturn = decoder.decode(decode);
+    decoder.complete();
     return result;
   }
 
@@ -109,6 +107,35 @@ export class Decoder {
    */
   get done(): boolean {
     return this.#cursor === this.#bytes.length;
+  }
+
+  /**
+   * Returns an `Uint8Array` containing the bytes consumed so far.
+   *
+   * > **INFO:** the returned array is a zero-copy view over the source bytes:
+   * mutating it mutates the source, and it retains the source's backing
+   * buffer even after the Decoder is discarded.
+   */
+  toUint8Array(): Uint8Array {
+    return new Uint8Array(this.#bytes.buffer, this.#bytes.byteOffset, this.#cursor);
+  }
+
+  /**
+   * Throws if some bytes have not been consumed yet.
+   */
+  complete(): void {
+    if (!this.done) {
+      throw new Error(`${this.remaining} bytes remaining.`);
+    }
+  }
+
+  /**
+   * Calls the function `decode` with `this` as argument, and returns its result.
+   *
+   * > **INFO:** this is useful to decode a value from this Decoder based on an external function.
+   */
+  decode<GReturn>(decode: DecodeFunction<GReturn>): GReturn {
+    return decode(this);
   }
 
   /**
