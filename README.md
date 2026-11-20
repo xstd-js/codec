@@ -104,8 +104,8 @@ const value: Value = decoder.fork(byteLength, (child) => parseValue(child));
 ### Converters
 
 Converters are streaming transducers reading from a `Decoder` and writing into an `Encoder`,
-so any encoding can be chained into any other — for example, turning a base64 string into a
-quoted-printable string:
+so any encoding can be chained into any other — for example, decoding base64 chars into raw
+bytes, then encoding those bytes as quoted-printable chars:
 
 ```ts
 import {
@@ -115,16 +115,18 @@ import {
   Encoder,
 } from '@xstd/codec';
 
-const base64: string = 'SGVsbG8=';
-
-const quotedPrintable: string = Decoder.string(
-  convertBytesToQuotedPrintableString(
-    convertBase64StringToBytes(new Encoder().string(base64).toDecoder(), new Encoder()).toDecoder(),
-    new Encoder(),
-  ).toUint8Array(),
-  { encoding: 'binary' },
-);
+// base64 chars -> raw bytes -> quoted-printable chars
+const quotedPrintableChars: Uint8Array = convertBytesToQuotedPrintableString(
+  convertBase64StringToBytes(
+    new Decoder(new TextEncoder().encode('SGVsbG8=')), // in: base64 chars
+    new Encoder(), // out: raw bytes
+  ).toDecoder(),
+  new Encoder(), // out: quoted-printable chars
+).toUint8Array();
 ```
+
+JS strings enter and exit such a chain through `Encoder.string(...)` and
+`Decoder.string(bytes, { encoding: 'binary' })` — every other encoding chains the same way.
 
 ### Contracts
 
@@ -142,3 +144,7 @@ const quotedPrintable: string = Decoder.string(
 - **Uniform errors** — plain `Error`/`RangeError` with pinned messages (`Size limit reached.`,
   `Invalid size: …`, `N bytes remaining.`); invalid `Encoder` byte length options are rejected
   with a `RangeError` instead of being silently clamped.
+
+```
+
+```
