@@ -1,7 +1,4 @@
-import { decodeIntXBE } from './extra/number/signed/int-x.private/decode-int-x-b-e/decode-int-x-b-e.js';
-import { decodeIntXLE } from './extra/number/signed/int-x.private/decode-int-x-l-e/decode-int-x-l-e.js';
-import { decodeUintXBE } from './extra/number/unsigned/uint-x.private/decode-uint-x-b-e/decode-uint-x-b-e.js';
-import { decodeUintXLE } from './extra/number/unsigned/uint-x.private/decode-uint-x-l-e/decode-uint-x-l-e.js';
+import { getShared64bDataView } from '../functions.private/shared-data-view/shared-64b-data-view.js';
 import { type DecodeFunction } from './types/decode-function.js';
 import { type DecoderStringOptions } from './types/methods/string/decoder-string-options.js';
 
@@ -156,8 +153,37 @@ export class Decoder {
     return this.#int16(false);
   }
 
+  #decodeUintX(bytes: number, littleEndian: boolean): bigint {
+    const dataView: DataView = getShared64bDataView();
+
+    if (littleEndian) {
+      for (let i: number = 0; i < bytes; i++) {
+        dataView.setUint8(i, this.uint8());
+      }
+    } else {
+      for (let i: number = bytes - 1; i >= 0; i--) {
+        dataView.setUint8(i, this.uint8());
+      }
+    }
+
+    return dataView.getBigUint64(0, true);
+  }
+
+  #decodeIntX(bytes: number, littleEndian: boolean): bigint {
+    const value: bigint = this.#decodeUintX(bytes, littleEndian);
+
+    const shift: bigint = BigInt(bytes - 1) * 8n;
+    const max: bigint = 0x80n << shift;
+
+    if (value >= max) {
+      return value - (0x100n << shift);
+    }
+
+    return value;
+  }
+
   #int24(littleEndian: boolean): number {
-    return Number((littleEndian ? decodeIntXLE : decodeIntXBE)(this, 3));
+    return Number(this.#decodeIntX(3, littleEndian));
   }
 
   /**
@@ -187,7 +213,7 @@ export class Decoder {
   }
 
   #int40(littleEndian: boolean): number {
-    return Number((littleEndian ? decodeIntXLE : decodeIntXBE)(this, 5));
+    return Number(this.#decodeIntX(5, littleEndian));
   }
 
   /**
@@ -205,7 +231,7 @@ export class Decoder {
   }
 
   #int48(littleEndian: boolean): number {
-    return Number((littleEndian ? decodeIntXLE : decodeIntXBE)(this, 6));
+    return Number(this.#decodeIntX(6, littleEndian));
   }
 
   /**
@@ -223,7 +249,7 @@ export class Decoder {
   }
 
   #int56(littleEndian: boolean): bigint {
-    return littleEndian ? decodeIntXLE(this, 7) : decodeIntXBE(this, 7);
+    return this.#decodeIntX(7, littleEndian);
   }
 
   /**
@@ -269,7 +295,7 @@ export class Decoder {
   }
 
   #uint24(littleEndian: boolean): number {
-    return Number((littleEndian ? decodeUintXLE : decodeUintXBE)(this, 3));
+    return Number(this.#decodeUintX(3, littleEndian));
   }
 
   /**
@@ -299,7 +325,7 @@ export class Decoder {
   }
 
   #uint40(littleEndian: boolean): number {
-    return Number((littleEndian ? decodeUintXLE : decodeUintXBE)(this, 5));
+    return Number(this.#decodeUintX(5, littleEndian));
   }
 
   /**
@@ -317,7 +343,7 @@ export class Decoder {
   }
 
   #uint48(littleEndian: boolean): number {
-    return Number((littleEndian ? decodeUintXLE : decodeUintXBE)(this, 6));
+    return Number(this.#decodeUintX(6, littleEndian));
   }
 
   /**
@@ -335,7 +361,7 @@ export class Decoder {
   }
 
   #uint56(littleEndian: boolean): bigint {
-    return littleEndian ? decodeUintXLE(this, 7) : decodeUintXBE(this, 7);
+    return this.#decodeUintX(7, littleEndian);
   }
 
   /**

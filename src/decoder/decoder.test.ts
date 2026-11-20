@@ -190,97 +190,135 @@ describe('Decoder', () => {
         });
 
         test('uint24BE', () => {
-          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56])).uint24BE()).toBe(0x123456);
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56]));
+          expect(decoder.uint24BE()).toBe(0x123456);
+          expect(decoder.consumed).toBe(3);
         });
       });
 
       describe('uint40', () => {
         test('uint40LE', () => {
-          expect(new Decoder(new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12])).uint40LE()).toBe(
-            0x1234567890,
-          );
+          const decoder = new Decoder(new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(decoder.uint40LE()).toBe(0x1234567890);
+          expect(decoder.consumed).toBe(5);
         });
 
         test('uint40BE', () => {
-          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90])).uint40BE()).toBe(
-            0x1234567890,
-          );
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90]));
+          expect(decoder.uint40BE()).toBe(0x1234567890);
+          expect(decoder.consumed).toBe(5);
         });
       });
 
       describe('uint48', () => {
         test('uint48LE', () => {
-          expect(new Decoder(new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12])).uint48LE()).toBe(
-            0x1234567890ab,
-          );
+          const decoder = new Decoder(new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(decoder.uint48LE()).toBe(0x1234567890ab);
+          expect(decoder.consumed).toBe(6);
         });
 
         test('uint48BE', () => {
-          expect(new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab])).uint48BE()).toBe(
-            0x1234567890ab,
-          );
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab]));
+          expect(decoder.uint48BE()).toBe(0x1234567890ab);
+          expect(decoder.consumed).toBe(6);
         });
       });
 
       describe('uint56', () => {
         test('uint56LE', () => {
-          expect(
-            new Decoder(new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12])).uint56LE(),
-          ).toBe(0x1234567890abcdn);
+          const decoder = new Decoder(new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(decoder.uint56LE()).toBe(0x1234567890abcdn);
+          expect(decoder.consumed).toBe(7);
         });
 
         test('uint56BE', () => {
-          expect(
-            new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd])).uint56BE(),
-          ).toBe(0x1234567890abcdn);
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd]));
+          expect(decoder.uint56BE()).toBe(0x1234567890abcdn);
+          expect(decoder.consumed).toBe(7);
         });
       });
 
       describe('int24', () => {
         test('int24LE', () => {
-          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff])).int24LE()).toBe(-1);
+          const decoder = new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0x00, 0x00, 0x80]));
+          expect(decoder.int24LE()).toBe(-1);
+          expect(decoder.int24LE()).toBe(-8388608);
+          expect(decoder.consumed).toBe(6);
         });
 
         test('int24BE', () => {
-          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff])).int24BE()).toBe(-1);
+          const decoder = new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0x80, 0x00, 0x00]));
+          expect(decoder.int24BE()).toBe(-1);
+          expect(decoder.int24BE()).toBe(-8388608);
+          expect(decoder.consumed).toBe(6);
         });
       });
 
       describe('int40', () => {
         test('int40LE', () => {
-          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])).int40LE()).toBe(-1);
+          const decoder = new Decoder(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x80]),
+          );
+          expect(decoder.int40LE()).toBe(-1);
+          expect(decoder.int40LE()).toBe(-549755813888);
+          expect(decoder.consumed).toBe(10);
         });
 
         test('int40BE', () => {
-          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])).int40BE()).toBe(-1);
+          const decoder = new Decoder(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00]),
+          );
+          expect(decoder.int40BE()).toBe(-1);
+          expect(decoder.int40BE()).toBe(-549755813888);
+          expect(decoder.consumed).toBe(10);
         });
       });
 
       describe('int48', () => {
         test('int48LE', () => {
-          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int48LE()).toBe(
-            -1,
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+            ]),
           );
+          expect(decoder.int48LE()).toBe(-1);
+          expect(decoder.int48LE()).toBe(-140737488355328);
+          expect(decoder.consumed).toBe(12);
         });
 
         test('int48BE', () => {
-          expect(new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int48BE()).toBe(
-            -1,
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ]),
           );
+          expect(decoder.int48BE()).toBe(-1);
+          expect(decoder.int48BE()).toBe(-140737488355328);
+          expect(decoder.consumed).toBe(12);
         });
       });
 
       describe('int56', () => {
         test('int56LE', () => {
-          expect(
-            new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int56LE(),
-          ).toBe(-1n);
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+            ]),
+          );
+          expect(decoder.int56LE()).toBe(-1n);
+          expect(decoder.int56LE()).toBe(-36028797018963968n);
+          expect(decoder.consumed).toBe(14);
         });
 
         test('int56BE', () => {
-          expect(
-            new Decoder(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])).int56BE(),
-          ).toBe(-1n);
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ]),
+          );
+          expect(decoder.int56BE()).toBe(-1n);
+          expect(decoder.int56BE()).toBe(-36028797018963968n);
+          expect(decoder.consumed).toBe(14);
         });
       });
 

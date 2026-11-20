@@ -1,8 +1,5 @@
 import { Decoder } from '../decoder/decoder.js';
-import { encodeIntXBE } from './extra/number/signed/int-x.private/encode-int-x-b-e/encode-int-x-b-e.js';
-import { encodeIntXLE } from './extra/number/signed/int-x.private/encode-int-x-l-e/encode-int-x-l-e.js';
-import { encodeUintXBE } from './extra/number/unsigned/uint-x.private/encode-uint-x-b-e/encode-uint-x-b-e.js';
-import { encodeUintXLE } from './extra/number/unsigned/uint-x.private/encode-uint-x-l-e/encode-uint-x-l-e.js';
+import { getShared64bDataView } from '../functions.private/shared-data-view/shared-64b-data-view.js';
 import { computeGrownByteLength } from './helpers.private/compute-grown-byte-length/compute-grown-byte-length.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
@@ -214,8 +211,26 @@ export class Encoder {
     return this.#int16(value, false);
   }
 
+  #encodeX(value: bigint | number, bytes: number, littleEndian: boolean): void {
+    const dataView: DataView = getShared64bDataView();
+
+    // NOTE: `BigInt.asUintN` makes the two's complement wrap deterministic:
+    // `DataView.setBigUint64` itself rejects negative BigInts on some engines.
+    dataView.setBigUint64(0, BigInt.asUintN(64, BigInt(value)), true);
+
+    if (littleEndian) {
+      for (let i: number = 0; i < bytes; i++) {
+        this.uint8(dataView.getUint8(i));
+      }
+    } else {
+      for (let i: number = bytes - 1; i >= 0; i--) {
+        this.uint8(dataView.getUint8(i));
+      }
+    }
+  }
+
   #int24(value: number, littleEndian: boolean): this {
-    (littleEndian ? encodeIntXLE : encodeIntXBE)(this, value, 3);
+    this.#encodeX(value, 3, littleEndian);
     return this;
   }
 
@@ -247,7 +262,7 @@ export class Encoder {
   }
 
   #int40(value: number, littleEndian: boolean): this {
-    (littleEndian ? encodeIntXLE : encodeIntXBE)(this, value, 5);
+    this.#encodeX(value, 5, littleEndian);
     return this;
   }
 
@@ -266,7 +281,7 @@ export class Encoder {
   }
 
   #int48(value: number, littleEndian: boolean): this {
-    (littleEndian ? encodeIntXLE : encodeIntXBE)(this, value, 6);
+    this.#encodeX(value, 6, littleEndian);
     return this;
   }
 
@@ -285,7 +300,7 @@ export class Encoder {
   }
 
   #int56(value: bigint | number, littleEndian: boolean): this {
-    (littleEndian ? encodeIntXLE : encodeIntXBE)(this, value, 7);
+    this.#encodeX(value, 7, littleEndian);
     return this;
   }
 
@@ -339,7 +354,7 @@ export class Encoder {
   }
 
   #uint24(value: number, littleEndian: boolean): this {
-    (littleEndian ? encodeUintXLE : encodeUintXBE)(this, value, 3);
+    this.#encodeX(value, 3, littleEndian);
     return this;
   }
 
@@ -371,7 +386,7 @@ export class Encoder {
   }
 
   #uint40(value: number, littleEndian: boolean): this {
-    (littleEndian ? encodeUintXLE : encodeUintXBE)(this, value, 5);
+    this.#encodeX(value, 5, littleEndian);
     return this;
   }
 
@@ -390,7 +405,7 @@ export class Encoder {
   }
 
   #uint48(value: number, littleEndian: boolean): this {
-    (littleEndian ? encodeUintXLE : encodeUintXBE)(this, value, 6);
+    this.#encodeX(value, 6, littleEndian);
     return this;
   }
 
@@ -409,7 +424,7 @@ export class Encoder {
   }
 
   #uint56(value: bigint | number, littleEndian: boolean): this {
-    (littleEndian ? encodeUintXLE : encodeUintXBE)(this, value, 7);
+    this.#encodeX(value, 7, littleEndian);
     return this;
   }
 
