@@ -12,7 +12,8 @@
 
 ## @xstd/codec
 
-Encoder and Decoder implementations
+Transform any value into bytes and back: an `Encoder` and a `Decoder` for numbers, strings and
+JSON, with chainable streaming converters (base64, hex, quoted-printable).
 
 ## 📦 Installation
 

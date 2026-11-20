@@ -2,10 +2,19 @@
   "name": "@xstd/codec",
   "version": "0.7.1",
   "type": "module",
-  "description": "Encoder and Decoder implementations",
+  "description": "Transform any value into bytes and back: an Encoder and a Decoder for numbers, strings and JSON, with chainable streaming converters (base64, hex, quoted-printable).",
   "keywords": [
     "encoder",
-    "decoder"
+    "decoder",
+    "codec",
+    "bytes",
+    "binary",
+    "uint8array",
+    "serialization",
+    "base64",
+    "hex",
+    "quoted-printable",
+    "transcoder"
   ],
   "author": "Valentin Richard",
   "license": "MIT",
