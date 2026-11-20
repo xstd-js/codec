@@ -511,6 +511,19 @@ describe('Encoder', () => {
           expect(encoder.length).toBe(8);
         });
       });
+      describe('wrapping', () => {
+        test('wraps unsigned integer writes with DataView semantics', () => {
+          expect(new Encoder().uint8(300).toUint8Array()).toEqual(new Uint8Array([0x2c]));
+          expect(new Encoder().uint32LE(2 ** 32 + 5).toUint8Array()).toEqual(
+            new Uint8Array([0x05, 0x00, 0x00, 0x00]),
+          );
+        });
+
+        test('wraps signed integer writes with DataView semantics', () => {
+          expect(new Encoder().int8(128).toUint8Array()).toEqual(new Uint8Array([0x80]));
+          expect(new Encoder().int16LE(70000).toUint8Array()).toEqual(new Uint8Array([0x70, 0x11]));
+        });
+      });
     });
 
     describe('bytes', () => {

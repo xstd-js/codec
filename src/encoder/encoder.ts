@@ -174,6 +174,8 @@ export class Encoder {
   /*
      INFO: All the following methods return `this`, enabling us to chain them.
      INFO: Each _write_ moves the `cursor` and grows the encoded bytes.
+     INFO: Integer writes use DataView semantics: values wrap modulo 2^bits
+           (two's complement for negatives).
      INFO: All writes are atomic — if the size limit is reached, the write
            throws before moving the cursor, leaving `length` unchanged —
            except `string({ encoding: 'binary' })`, which validates characters
