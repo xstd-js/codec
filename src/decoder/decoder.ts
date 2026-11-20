@@ -48,7 +48,9 @@ export class Decoder {
     bytes: Uint8Array,
     reviver?: (this: any, key: string, value: any) => any,
   ): GValue {
-    return JSON.parse(new TextDecoder().decode(bytes), reviver);
+    return this.decode<GValue>(bytes, (decoder: Decoder): GValue => {
+      return decoder.json<GValue>(decoder.remaining, reviver);
+    });
   }
 
   readonly #bytes: Uint8Array;

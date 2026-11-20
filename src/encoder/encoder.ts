@@ -1,4 +1,5 @@
 import { Decoder } from '../decoder/decoder.js';
+import { TEXT_ENCODER } from './constants.private/text-encoder.js';
 import { computeGrownByteLength } from './helpers.private/compute-grown-byte-length/compute-grown-byte-length.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
@@ -87,7 +88,9 @@ export class Encoder {
     replacer?: (this: any, key: string, value: any) => any,
     space?: string | number,
   ): Uint8Array {
-    return new TextEncoder().encode(JSON.stringify(value, replacer, space));
+    return this.encode(value, (encoder: Encoder): void => {
+      encoder.json(value, replacer, space);
+    });
   }
 
   // the raw buffer containing the bytes.
@@ -580,7 +583,7 @@ export class Encoder {
   string(value: string, { encoding = 'utf-8' }: EncoderStringOptions = {}): this {
     switch (encoding) {
       case 'utf-8':
-        this.bytes(new TextEncoder().encode(value));
+        this.bytes(TEXT_ENCODER.encode(value));
         break;
       case 'binary': {
         const length: number = value.length;
