@@ -4,6 +4,12 @@ import { type DecoderStringOptions } from './types/methods/string/decoder-string
 /**
  * Used to _decode_ an `Uint8Array` into various kind of data.
  *
+ * > **WARNING:** until a Decoder is `done`, the source bytes and every
+ * `Uint8Array` it returned must be treated as readonly: do not mutate the
+ * source, the results of `bytes()`, `toUint8Array()`, or `fork()` windows,
+ * so that no data changes on the fly during reads. Once `done`, mutation
+ * is safe.
+ *
  * @example
  *
  * Decodes a _binary_ string:
@@ -114,7 +120,8 @@ export class Decoder {
    *
    * > **INFO:** the returned array is a zero-copy view over the source bytes:
    * mutating it mutates the source, and it retains the source's backing
-   * buffer even after the Decoder is discarded.
+   * buffer even after the Decoder is discarded. Treat it as readonly while
+   * this Decoder is not `done`.
    */
   toUint8Array(): Uint8Array {
     return new Uint8Array(this.#bytes.buffer, this.#bytes.byteOffset, this.#cursor);
@@ -475,7 +482,8 @@ export class Decoder {
    * Reads an `Uint8Array` from this Decoder.
    *
    * > **INFO:** the returned array is a live subarray of the source bytes:
-   * mutations are visible on both sides.
+   * mutations are visible on both sides. Treat it as readonly while this
+   * Decoder is not `done`.
    *
    * @param {number} [length] The length of the bytes to read.
    * @returns {Uint8Array} The read bytes.
