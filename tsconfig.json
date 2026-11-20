@@ -3,40 +3,36 @@
     /* Build */
     "target": "ESNext",
     "module": "NodeNext",
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
-    "types": [
-      "node"
-    ],
-    "typeRoots": [
-      "node_modules/@types"
-    ],
+    "lib": ["ESNext", "DOM"],
+    "types": ["node"],
+    "typeRoots": ["node_modules/@types"],
     "useDefineForClassFields": true,
     "skipLibCheck": true,
     "declaration": false,
-    "experimentalDecorators": true,
+    "experimentalDecorators": false,
     "emitDecoratorMetadata": false,
     "importHelpers": false,
     "noEmitHelpers": false,
     "pretty": true,
     "removeComments": false,
-    "downlevelIteration": false,
     "resolveJsonModule": true,
     "sourceMap": true,
     "stripInternal": false,
-    "preserveConstEnums": false,
+    "preserveConstEnums": true,
     "alwaysStrict": true,
 
     /* Mode */
     "esModuleInterop": true,
     "moduleResolution": "NodeNext",
-    "allowImportingTsExtensions": false,
     "isolatedModules": false,
     "moduleDetection": "force",
     "noEmit": false,
+
+    /* Import */
+    "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
 
     /* Linting */
     "strict": true,
@@ -51,14 +47,12 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "noImplicitUseStrict": false,
     "noLib": false,
     "noPropertyAccessFromIndexSignature": true,
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
+    "erasableSyntaxOnly": true
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }
