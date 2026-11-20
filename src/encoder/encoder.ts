@@ -164,6 +164,8 @@ export class Encoder {
   /*
      INFO: All the following methods return `this`, enabling us to chain them.
      INFO: Each _write_ moves the `cursor` and grows the encoded bytes.
+     INFO: If a _write_ throws, the bytes written so far are left in an
+           unspecified state: discard the Encoder instance rather than reusing it.
    */
 
   /**
