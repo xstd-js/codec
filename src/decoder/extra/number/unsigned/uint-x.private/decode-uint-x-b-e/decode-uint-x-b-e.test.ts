@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { Decoder } from '../../../../../decoder.js';
 import { decodeUintXBE } from './decode-uint-x-b-e.js';
 
-describe('decodeUintXLE', () => {
+describe('decodeUintXBE', () => {
   const decode = (input: number[], bytes: number): bigint => {
     return decodeUintXBE(new Decoder(new Uint8Array(input)), bytes);
   };

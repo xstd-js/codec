@@ -13,8 +13,8 @@ export interface ConvertBytesToQuotedPrintableStringOptions {
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
- * @param {number} [length] The length of the bytes to read and convert to base64 chars.
- * @param {ConvertBytesToBase64StringOptions} [options]
+ * @param {number} [length] The length of the bytes to read and convert to quoted-printable chars.
+ * @param {ConvertBytesToQuotedPrintableStringOptions} [options]
  * @returns {Encoder} The `output` Encoder with the encoded bytes.
  */
 export function convertBytesToQuotedPrintableString<GOutput extends Encoder>(

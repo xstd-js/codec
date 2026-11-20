@@ -56,7 +56,7 @@ export class Encoder {
    * ```ts
    * function encodeBinaryString(encoder: Encoder, input: string): void {
    *   encoder
-   *     .int16LE(input)
+   *     .int16LE(input.length)
    *     .string(input, { encoding: 'binary' });
    * }
    *

@@ -32,7 +32,7 @@ export function convertQuotedPrintableStringToBytes<GOutput extends Encoder>(
 
     if (byte === 0x3d /* = */) {
       if (remaining() < 2) {
-        quotedPrintableError('found an equal sign without without two following characters.');
+        quotedPrintableError('found an equal sign without two following characters.');
       }
 
       const a: number = input.uint8();

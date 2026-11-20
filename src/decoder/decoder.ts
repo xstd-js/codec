@@ -219,7 +219,7 @@ export class Decoder {
 
   #float16(littleEndian: boolean): number {
     /* istanbul ignore if -- @preserve */
-    if (this.#view.setFloat16 === undefined) {
+    if (this.#view.getFloat16 === undefined) {
       return get_float_16(this.#view, this.#consume(2), littleEndian);
       /* istanbul ignore else -- @preserve */
     } else {

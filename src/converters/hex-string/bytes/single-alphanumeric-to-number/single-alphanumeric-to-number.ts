@@ -1,7 +1,7 @@
 export type AlphanumericMustBeUpperCase = 'yes' | 'no' | 'either';
 
 /**
- * Converts an alphanumeric char (0-9a-fA-F) into its number counterpart (0-16).
+ * Converts an alphanumeric char (0-9a-fA-F) into its number counterpart (0-15).
  */
 export function singleAlphanumericToNumber(
   byte: number,
