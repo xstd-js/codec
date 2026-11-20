@@ -68,6 +68,14 @@ describe('Encoder', () => {
         // excess limit
         expect(() => encoder.uint8(2)).toThrow();
       });
+
+      test('size limit reached mid multi-byte write', () => {
+        const encoder = new Encoder({ initialByteLength: 4, maxByteLength: 4 });
+        encoder.uint32LE(0x12345678);
+        expect(() => encoder.uint24LE(0x123456)).toThrow('Size limit reached.');
+        expect(encoder.length).toBe(4);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
+      });
     });
 
     describe('encode', () => {

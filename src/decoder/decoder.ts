@@ -1,4 +1,3 @@
-import { getShared64bDataView } from '../functions.private/shared-data-view/shared-64b-data-view.js';
 import { type DecodeFunction } from './types/decode-function.js';
 import { type DecoderStringOptions } from './types/methods/string/decoder-string-options.js';
 
@@ -154,19 +153,20 @@ export class Decoder {
   }
 
   #decodeUintX(bytes: number, littleEndian: boolean): bigint {
-    const dataView: DataView = getShared64bDataView();
+    const start: number = this.#consume(bytes);
+    let packed: bigint = 0n;
 
     if (littleEndian) {
-      for (let i: number = 0; i < bytes; i++) {
-        dataView.setUint8(i, this.uint8());
+      for (let i: number = bytes - 1; i >= 0; i--) {
+        packed = (packed << 8n) | BigInt(this.#bytes[start + i]);
       }
     } else {
-      for (let i: number = bytes - 1; i >= 0; i--) {
-        dataView.setUint8(i, this.uint8());
+      for (let i: number = 0; i < bytes; i++) {
+        packed = (packed << 8n) | BigInt(this.#bytes[start + i]);
       }
     }
 
-    return dataView.getBigUint64(0, true);
+    return packed;
   }
 
   #decodeIntX(bytes: number, littleEndian: boolean): bigint {

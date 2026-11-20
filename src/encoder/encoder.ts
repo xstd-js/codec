@@ -1,5 +1,4 @@
 import { Decoder } from '../decoder/decoder.js';
-import { getShared64bDataView } from '../functions.private/shared-data-view/shared-64b-data-view.js';
 import { computeGrownByteLength } from './helpers.private/compute-grown-byte-length/compute-grown-byte-length.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
@@ -155,8 +154,11 @@ export class Encoder {
   /*
      INFO: All the following methods return `this`, enabling us to chain them.
      INFO: Each _write_ moves the `cursor` and grows the encoded bytes.
-     INFO: If a _write_ throws, the bytes written so far are left in an
-           unspecified state: discard the Encoder instance rather than reusing it.
+     INFO: Numeric writes are atomic: if the size limit is reached, the write
+           throws before moving the cursor, leaving `length` unchanged.
+     INFO: `string({ encoding: 'binary' })` validates characters while writing:
+           if it throws, the bytes written so far are left in an unspecified
+           state: discard the Encoder instance rather than reusing it.
    */
 
   /**
@@ -212,20 +214,15 @@ export class Encoder {
   }
 
   #encodeUintX(value: bigint | number, bytes: number, littleEndian: boolean): void {
-    const dataView: DataView = getShared64bDataView();
+    const start: number = this.#alloc(bytes);
 
     // NOTE: `BigInt.asUintN` makes the two's complement wrap deterministic:
     // `DataView.setBigUint64` itself rejects negative BigInts on some engines.
-    dataView.setBigUint64(0, BigInt.asUintN(64, BigInt(value)), true);
+    const packed: bigint = BigInt.asUintN(64, BigInt(value));
 
-    if (littleEndian) {
-      for (let i: number = 0; i < bytes; i++) {
-        this.uint8(dataView.getUint8(i));
-      }
-    } else {
-      for (let i: number = bytes - 1; i >= 0; i--) {
-        this.uint8(dataView.getUint8(i));
-      }
+    for (let i: number = 0; i < bytes; i++) {
+      const shift: bigint = BigInt(littleEndian ? i : bytes - 1 - i) * 8n;
+      this.#bytes[start + i] = Number((packed >> shift) & 0xffn);
     }
   }
 
