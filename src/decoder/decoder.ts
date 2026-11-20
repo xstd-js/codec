@@ -139,6 +139,35 @@ export class Decoder {
   }
 
   /**
+   * Creates a new `Decoder` bounded to the next `length` bytes of this Decoder,
+   * calls the function `decode` with it as argument, and returns its result.
+   *
+   * Then, if the child `Decoder` consumed its whole window, moves the cursor of
+   * this Decoder of `length` bytes, else an `Error` is thrown and this Decoder
+   * is left untouched.
+   *
+   * > **INFO:** the child `Decoder` decodes a live subarray of the source bytes:
+   * mutations are visible on both sides.
+   */
+  fork<GReturn>(length: number, decode: DecodeFunction<GReturn>): GReturn {
+    if (!Number.isSafeInteger(length) || length < 0) {
+      throw new RangeError(`Invalid length: ${length}.`);
+    }
+
+    if (length > this.remaining) {
+      throw new Error('Size limit reached.');
+    }
+
+    const child: Decoder = new Decoder(this.#bytes.subarray(this.#cursor, this.#cursor + length));
+    const result: GReturn = decode(child);
+    child.complete();
+
+    this.#cursor += length;
+
+    return result;
+  }
+
+  /**
    * Reads an `int8` from this Decoder, and moves the cursor of 1 byte for the next _read_
    */
   int8(): number {
