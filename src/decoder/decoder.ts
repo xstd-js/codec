@@ -156,6 +156,24 @@ export class Decoder {
     return this.#int16(false);
   }
 
+  #int24(littleEndian: boolean): number {
+    return Number((littleEndian ? decodeIntXLE : decodeIntXBE)(this, 3));
+  }
+
+  /**
+   * Reads an `int24` represented as _little-endian_ from this Decoder.
+   */
+  int24LE(): number {
+    return this.#int24(true);
+  }
+
+  /**
+   * Reads an `int24` represented as _big-endian_ from this Decoder.
+   */
+  int24BE(): number {
+    return this.#int24(false);
+  }
+
   #int32(littleEndian: boolean): number {
     return this.#view.getInt32(this.#consume(4), littleEndian);
   }
@@ -166,6 +184,60 @@ export class Decoder {
 
   int32BE(): number {
     return this.#int32(false);
+  }
+
+  #int40(littleEndian: boolean): number {
+    return Number((littleEndian ? decodeIntXLE : decodeIntXBE)(this, 5));
+  }
+
+  /**
+   * Reads an `int40` represented as _little-endian_ from this Decoder.
+   */
+  int40LE(): number {
+    return this.#int40(true);
+  }
+
+  /**
+   * Reads an `int40` represented as _big-endian_ from this Decoder.
+   */
+  int40BE(): number {
+    return this.#int40(false);
+  }
+
+  #int48(littleEndian: boolean): number {
+    return Number((littleEndian ? decodeIntXLE : decodeIntXBE)(this, 6));
+  }
+
+  /**
+   * Reads an `int48` represented as _little-endian_ from this Decoder.
+   */
+  int48LE(): number {
+    return this.#int48(true);
+  }
+
+  /**
+   * Reads an `int48` represented as _big-endian_ from this Decoder.
+   */
+  int48BE(): number {
+    return this.#int48(false);
+  }
+
+  #int56(littleEndian: boolean): bigint {
+    return littleEndian ? decodeIntXLE(this, 7) : decodeIntXBE(this, 7);
+  }
+
+  /**
+   * Reads an `int56` represented as _little-endian_ from this Decoder.
+   */
+  int56LE(): bigint {
+    return this.#int56(true);
+  }
+
+  /**
+   * Reads an `int56` represented as _big-endian_ from this Decoder.
+   */
+  int56BE(): bigint {
+    return this.#int56(false);
   }
 
   #int64(littleEndian: boolean): bigint {
@@ -196,6 +268,24 @@ export class Decoder {
     return this.#uint16(false);
   }
 
+  #uint24(littleEndian: boolean): number {
+    return Number((littleEndian ? decodeUintXLE : decodeUintXBE)(this, 3));
+  }
+
+  /**
+   * Reads a `uint24` represented as _little-endian_ from this Decoder.
+   */
+  uint24LE(): number {
+    return this.#uint24(true);
+  }
+
+  /**
+   * Reads a `uint24` represented as _big-endian_ from this Decoder.
+   */
+  uint24BE(): number {
+    return this.#uint24(false);
+  }
+
   #uint32(littleEndian: boolean): number {
     return this.#view.getUint32(this.#consume(4), littleEndian);
   }
@@ -208,6 +298,60 @@ export class Decoder {
     return this.#uint32(false);
   }
 
+  #uint40(littleEndian: boolean): number {
+    return Number((littleEndian ? decodeUintXLE : decodeUintXBE)(this, 5));
+  }
+
+  /**
+   * Reads a `uint40` represented as _little-endian_ from this Decoder.
+   */
+  uint40LE(): number {
+    return this.#uint40(true);
+  }
+
+  /**
+   * Reads a `uint40` represented as _big-endian_ from this Decoder.
+   */
+  uint40BE(): number {
+    return this.#uint40(false);
+  }
+
+  #uint48(littleEndian: boolean): number {
+    return Number((littleEndian ? decodeUintXLE : decodeUintXBE)(this, 6));
+  }
+
+  /**
+   * Reads a `uint48` represented as _little-endian_ from this Decoder.
+   */
+  uint48LE(): number {
+    return this.#uint48(true);
+  }
+
+  /**
+   * Reads a `uint48` represented as _big-endian_ from this Decoder.
+   */
+  uint48BE(): number {
+    return this.#uint48(false);
+  }
+
+  #uint56(littleEndian: boolean): bigint {
+    return littleEndian ? decodeUintXLE(this, 7) : decodeUintXBE(this, 7);
+  }
+
+  /**
+   * Reads a `uint56` represented as _little-endian_ from this Decoder.
+   */
+  uint56LE(): bigint {
+    return this.#uint56(true);
+  }
+
+  /**
+   * Reads a `uint56` represented as _big-endian_ from this Decoder.
+   */
+  uint56BE(): bigint {
+    return this.#uint56(false);
+  }
+
   #uint64(littleEndian: boolean): bigint {
     return this.#view.getBigUint64(this.#consume(8), littleEndian);
   }
@@ -218,118 +362,6 @@ export class Decoder {
 
   uint64BE(): bigint {
     return this.#uint64(false);
-  }
-
-  /**
-   * Reads a `uint24` represented as _little-endian_ from this Decoder.
-   */
-  uint24LE(): number {
-    return Number(decodeUintXLE(this, 3));
-  }
-
-  /**
-   * Reads a `uint24` represented as _big-endian_ from this Decoder.
-   */
-  uint24BE(): number {
-    return Number(decodeUintXBE(this, 3));
-  }
-
-  /**
-   * Reads a `uint40` represented as _little-endian_ from this Decoder.
-   */
-  uint40LE(): number {
-    return Number(decodeUintXLE(this, 5));
-  }
-
-  /**
-   * Reads a `uint40` represented as _big-endian_ from this Decoder.
-   */
-  uint40BE(): number {
-    return Number(decodeUintXBE(this, 5));
-  }
-
-  /**
-   * Reads a `uint48` represented as _little-endian_ from this Decoder.
-   */
-  uint48LE(): number {
-    return Number(decodeUintXLE(this, 6));
-  }
-
-  /**
-   * Reads a `uint48` represented as _big-endian_ from this Decoder.
-   */
-  uint48BE(): number {
-    return Number(decodeUintXBE(this, 6));
-  }
-
-  /**
-   * Reads a `uint56` represented as _little-endian_ from this Decoder.
-   */
-  uint56LE(): bigint {
-    return decodeUintXLE(this, 7);
-  }
-
-  /**
-   * Reads a `uint56` represented as _big-endian_ from this Decoder.
-   */
-  uint56BE(): bigint {
-    return decodeUintXBE(this, 7);
-  }
-
-  /**
-   * Reads an `int24` represented as _little-endian_ from this Decoder.
-   */
-  int24LE(): number {
-    return Number(decodeIntXLE(this, 3));
-  }
-
-  /**
-   * Reads an `int24` represented as _big-endian_ from this Decoder.
-   */
-  int24BE(): number {
-    return Number(decodeIntXBE(this, 3));
-  }
-
-  /**
-   * Reads an `int40` represented as _little-endian_ from this Decoder.
-   */
-  int40LE(): number {
-    return Number(decodeIntXLE(this, 5));
-  }
-
-  /**
-   * Reads an `int40` represented as _big-endian_ from this Decoder.
-   */
-  int40BE(): number {
-    return Number(decodeIntXBE(this, 5));
-  }
-
-  /**
-   * Reads an `int48` represented as _little-endian_ from this Decoder.
-   */
-  int48LE(): number {
-    return Number(decodeIntXLE(this, 6));
-  }
-
-  /**
-   * Reads an `int48` represented as _big-endian_ from this Decoder.
-   */
-  int48BE(): number {
-    return Number(decodeIntXBE(this, 6));
-  }
-
-  /**
-   * Reads an `int56` represented as _little-endian_ from this Decoder.
-   */
-  int56LE(): bigint {
-    return decodeIntXLE(this, 7);
-  }
-
-  /**
-   * Reads an `int56` represented as _big-endian_ from this Decoder.
-   */
-  int56BE(): bigint {
-    return decodeIntXBE(this, 7);
   }
 
   #float16(littleEndian: boolean): number {

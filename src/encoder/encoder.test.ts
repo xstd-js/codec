@@ -238,83 +238,117 @@ describe('Encoder', () => {
 
       describe('uint24', () => {
         test('uint24LE', () => {
-          expect(new Encoder().uint24LE(0x123456).toUint8Array()).toEqual(new Uint8Array([0x56, 0x34, 0x12]));
+          expect(new Encoder().uint24LE(0x123456).toUint8Array()).toEqual(
+            new Uint8Array([0x56, 0x34, 0x12]),
+          );
           expect(new Encoder().uint24LE(0x123456).length).toBe(3);
         });
 
         test('uint24BE', () => {
-          expect(new Encoder().uint24BE(0x123456).toUint8Array()).toEqual(new Uint8Array([0x12, 0x34, 0x56]));
+          expect(new Encoder().uint24BE(0x123456).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56]),
+          );
         });
       });
 
       describe('uint40', () => {
         test('uint40LE', () => {
-          expect(new Encoder().uint40LE(0x1234567890).toUint8Array()).toEqual(new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(new Encoder().uint40LE(0x1234567890).toUint8Array()).toEqual(
+            new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12]),
+          );
         });
 
         test('uint40BE', () => {
-          expect(new Encoder().uint40BE(0x1234567890).toUint8Array()).toEqual(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90]));
+          expect(new Encoder().uint40BE(0x1234567890).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90]),
+          );
         });
       });
 
       describe('uint48', () => {
         test('uint48LE', () => {
-          expect(new Encoder().uint48LE(0x1234567890ab).toUint8Array()).toEqual(new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(new Encoder().uint48LE(0x1234567890ab).toUint8Array()).toEqual(
+            new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12]),
+          );
         });
 
         test('uint48BE', () => {
-          expect(new Encoder().uint48BE(0x1234567890ab).toUint8Array()).toEqual(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab]));
+          expect(new Encoder().uint48BE(0x1234567890ab).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab]),
+          );
         });
       });
 
       describe('uint56', () => {
         test('uint56LE', () => {
-          expect(new Encoder().uint56LE(0x1234567890abcdn).toUint8Array()).toEqual(new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(new Encoder().uint56LE(0x1234567890abcdn).toUint8Array()).toEqual(
+            new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12]),
+          );
         });
 
         test('uint56BE', () => {
-          expect(new Encoder().uint56BE(0x1234567890abcdn).toUint8Array()).toEqual(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd]));
+          expect(new Encoder().uint56BE(0x1234567890abcdn).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd]),
+          );
         });
       });
 
       describe('int24', () => {
         test('int24LE', () => {
-          expect(new Encoder().int24LE(-1).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff]));
-          expect(new Encoder().int24LE(0x123456).toUint8Array()).toEqual(new Uint8Array([0x56, 0x34, 0x12]));
+          expect(new Encoder().int24LE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int24LE(0x123456).toUint8Array()).toEqual(
+            new Uint8Array([0x56, 0x34, 0x12]),
+          );
         });
 
         test('int24BE', () => {
-          expect(new Encoder().int24BE(-1).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff]));
+          expect(new Encoder().int24BE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff]),
+          );
         });
       });
 
       describe('int40', () => {
         test('int40LE', () => {
-          expect(new Encoder().int40LE(-1).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]));
+          expect(new Encoder().int40LE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
         });
 
         test('int40BE', () => {
-          expect(new Encoder().int40BE(-1).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]));
+          expect(new Encoder().int40BE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
         });
       });
 
       describe('int48', () => {
         test('int48LE', () => {
-          expect(new Encoder().int48LE(-1).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff]));
+          expect(new Encoder().int48LE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
         });
 
         test('int48BE', () => {
-          expect(new Encoder().int48BE(-1).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff]));
+          expect(new Encoder().int48BE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
         });
       });
 
       describe('int56', () => {
         test('int56LE', () => {
-          expect(new Encoder().int56LE(-1n).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]));
+          expect(new Encoder().int56LE(-1n).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
         });
 
         test('int56BE', () => {
-          expect(new Encoder().int56BE(-1n).toUint8Array()).toEqual(new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]));
+          expect(new Encoder().int56BE(-1n).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
         });
       });
 
