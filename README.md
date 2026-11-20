@@ -143,7 +143,3 @@ JS strings enter and exit such a chain through `Encoder.string(...)` and
 - **Uniform errors** — plain `Error`/`RangeError` with pinned messages (`Size limit reached.`,
   `Invalid size: …`, `N bytes remaining.`); invalid `Encoder` byte length options are rejected
   with a `RangeError` instead of being silently clamped.
-
-```
-
-```
