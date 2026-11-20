@@ -514,6 +514,19 @@ describe('Decoder', () => {
         expect(decoder.remaining).toBe(2);
       });
 
+      test('leaves this Decoder untouched when decode throws', () => {
+        const decoder = new Decoder(new Uint8Array([0x02, 0x61, 0xff]));
+        decoder.uint8();
+        expect(() =>
+          decoder.fork(2, (d: Decoder): number => {
+            d.uint8();
+            throw new Error('checksum mismatch');
+          }),
+        ).toThrow('checksum mismatch');
+        expect(decoder.consumed).toBe(1);
+        expect(decoder.remaining).toBe(2);
+      });
+
       test('supports a zero-length window', () => {
         const decoder = new Decoder(new Uint8Array([0x01]));
         expect(decoder.fork(0, (d: Decoder): number => d.remaining)).toBe(0);
@@ -522,8 +535,10 @@ describe('Decoder', () => {
 
       test('rejects invalid lengths', () => {
         const decoder = new Decoder(new Uint8Array([1]));
-        expect(() => decoder.fork(-1, () => undefined)).toThrow(RangeError);
-        expect(() => decoder.fork(1.5, () => undefined)).toThrow(RangeError);
+        expect(() => decoder.fork(-1, () => undefined)).toThrow('Invalid length: -1.');
+        expect(() => decoder.fork(1.5, () => undefined)).toThrow('Invalid length: 1.5.');
+        expect(() => decoder.fork(NaN, () => undefined)).toThrow('Invalid length: NaN.');
+        expect(() => decoder.fork(Infinity, () => undefined)).toThrow('Invalid length: Infinity.');
       });
 
       test('rejects over-reads before running the child', () => {

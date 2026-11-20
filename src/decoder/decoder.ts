@@ -148,6 +148,11 @@ export class Decoder {
    *
    * > **INFO:** the child `Decoder` decodes a live subarray of the source bytes:
    * mutations are visible on both sides.
+   *
+   * @param {number} length The length of the window to decode. A non-safe-integer
+   * or negative length throws a `RangeError`, and a length over the remaining
+   * bytes throws an `Error`.
+   * @returns {GReturn} The result of the `decode` function.
    */
   fork<GReturn>(length: number, decode: DecodeFunction<GReturn>): GReturn {
     if (!Number.isSafeInteger(length) || length < 0) {
