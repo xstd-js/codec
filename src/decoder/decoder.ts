@@ -1,9 +1,14 @@
-import { get_float_16 } from '../functions.private/f16/get_float_16/get_float_16.js';
 import { type DecodeFunction } from './types/decode-function.js';
 import { type DecoderStringOptions } from './types/methods/string/decoder-string-options.js';
 
 /**
  * Used to _decode_ an `Uint8Array` into various kind of data.
+ *
+ * > **WARNING:** until a Decoder is `done`, the source bytes and every
+ * `Uint8Array` it returned must be treated as readonly: do not mutate the
+ * source, the results of `bytes()`, `toUint8Array()`, or `fork()` windows,
+ * so that no data changes on the fly during reads. Once `done`, mutation
+ * is safe.
  *
  * @example
  *
@@ -26,15 +31,13 @@ export class Decoder {
    */
   static decode<GReturn>(bytes: Uint8Array, decode: DecodeFunction<GReturn>): GReturn {
     const decoder: Decoder = new Decoder(bytes);
-    const result: GReturn = decode(decoder);
-    if (!decoder.done) {
-      throw new Error(`${decoder.remaining} bytes remaining.`);
-    }
+    const result: GReturn = decoder.decode(decode);
+    decoder.complete();
     return result;
   }
 
   /**
-   * Decodes a `string`.
+   * Decodes a `string` from bytes.
    */
   static string(bytes: Uint8Array, options?: DecoderStringOptions): string {
     return this.decode<string>(bytes, (decoder: Decoder): string => {
@@ -43,13 +46,15 @@ export class Decoder {
   }
 
   /**
-   * Decodes a `json` value.
+   * Decodes a `json` value from its `JSON.stringify(...)` representation (UTF-8 bytes).
    */
   static json<GValue>(
     bytes: Uint8Array,
     reviver?: (this: any, key: string, value: any) => any,
   ): GValue {
-    return JSON.parse(new TextDecoder().decode(bytes), reviver);
+    return this.decode<GValue>(bytes, (decoder: Decoder): GValue => {
+      return decoder.json<GValue>(decoder.remaining, reviver);
+    });
   }
 
   readonly #bytes: Uint8Array;
@@ -66,6 +71,10 @@ export class Decoder {
    * Consumes `size` bytes.
    */
   #consume(size: number): number {
+    if (!Number.isSafeInteger(size) || size < 0) {
+      throw new RangeError(`Invalid size: ${size}.`);
+    }
+
     const cursor: number = this.#cursor;
     const newCursor: number = cursor + size;
 
@@ -106,26 +115,72 @@ export class Decoder {
     return this.#cursor === this.#bytes.length;
   }
 
-  // toUint8Array(): Uint8Array {
-  //   return new Uint8Array(this.#bytes.buffer, this.#bytes.byteOffset, this.#cursor);
-  // }
-  //
-  // complete(): void {
-  //   if (this.#cursor !== this.#bytes.length) {
-  //     throw new Error(`${this.#bytes.length - this.#cursor} bytes remaining.`);
-  //   }
-  // }
-
-  // decode<GReturn>(decode: DecodeFunction<GReturn>): GReturn {
-  //   return decode(this);
-  // }
-
-  // fork(length: number = this.remaining): Decoder {
-  //   return new Decoder(this.#bytes.subarray(this.#cursor, this.#cursor + Math.max(0, length)));
-  // }
+  /**
+   * Returns an `Uint8Array` containing the bytes consumed so far.
+   *
+   * > **INFO:** the returned array is a zero-copy view over the source bytes:
+   * mutating it mutates the source, and it retains the source's backing
+   * buffer even after the Decoder is discarded. Treat it as readonly while
+   * this Decoder is not `done`.
+   */
+  toUint8Array(): Uint8Array {
+    return new Uint8Array(this.#bytes.buffer, this.#bytes.byteOffset, this.#cursor);
+  }
 
   /**
-   * Reads an `int8` from this Decoder, and moves the cursor of 1 byte for the next _read_
+   * Throws if some bytes have not been consumed yet.
+   */
+  complete(): void {
+    if (!this.done) {
+      throw new Error(`${this.remaining} bytes remaining.`);
+    }
+  }
+
+  /**
+   * Calls the function `decode` with `this` as argument, and returns its result.
+   *
+   * > **INFO:** this is useful to decode a value from this Decoder based on an external function.
+   */
+  decode<GReturn>(decode: DecodeFunction<GReturn>): GReturn {
+    return decode(this);
+  }
+
+  /**
+   * Creates a new `Decoder` bounded to the next `length` bytes of this Decoder,
+   * calls the function `decode` with it as argument, and returns its result.
+   *
+   * Then, if the child `Decoder` consumed its whole window, moves the cursor of
+   * this Decoder of `length` bytes, else an `Error` is thrown and this Decoder
+   * is left untouched.
+   *
+   * > **INFO:** the child `Decoder` decodes a live subarray of the source bytes:
+   * mutations are visible on both sides.
+   *
+   * @param {number} length The length of the window to decode. A non-safe-integer
+   * or negative length throws a `RangeError`, and a length over the remaining
+   * bytes throws an `Error`.
+   * @returns {GReturn} The result of the `decode` function.
+   */
+  fork<GReturn>(length: number, decode: DecodeFunction<GReturn>): GReturn {
+    if (!Number.isSafeInteger(length) || length < 0) {
+      throw new RangeError(`Invalid length: ${length}.`);
+    }
+
+    if (length > this.remaining) {
+      throw new Error('Size limit reached.');
+    }
+
+    const child: Decoder = new Decoder(this.#bytes.subarray(this.#cursor, this.#cursor + length));
+    const result: GReturn = decode(child);
+    child.complete();
+
+    this.#cursor += length;
+
+    return result;
+  }
+
+  /**
+   * Reads an `int8` from this Decoder.
    */
   int8(): number {
     return this.#view.getInt8(this.#consume(1));
@@ -149,30 +204,147 @@ export class Decoder {
     return this.#int16(false);
   }
 
+  #decodeUintX(bytes: number, littleEndian: boolean): bigint {
+    const start: number = this.#consume(bytes);
+    let packed: bigint = 0n;
+
+    if (littleEndian) {
+      for (let i: number = bytes - 1; i >= 0; i--) {
+        packed = (packed << 8n) | BigInt(this.#bytes[start + i]);
+      }
+    } else {
+      for (let i: number = 0; i < bytes; i++) {
+        packed = (packed << 8n) | BigInt(this.#bytes[start + i]);
+      }
+    }
+
+    return packed;
+  }
+
+  #decodeIntX(bytes: number, littleEndian: boolean): bigint {
+    const value: bigint = this.#decodeUintX(bytes, littleEndian);
+
+    const shift: bigint = BigInt(bytes - 1) * 8n;
+    const max: bigint = 0x80n << shift;
+
+    if (value >= max) {
+      return value - (0x100n << shift);
+    }
+
+    return value;
+  }
+
+  #int24(littleEndian: boolean): number {
+    return Number(this.#decodeIntX(3, littleEndian));
+  }
+
+  /**
+   * Reads an `int24` represented as _little-endian_ from this Decoder.
+   */
+  int24LE(): number {
+    return this.#int24(true);
+  }
+
+  /**
+   * Reads an `int24` represented as _big-endian_ from this Decoder.
+   */
+  int24BE(): number {
+    return this.#int24(false);
+  }
+
   #int32(littleEndian: boolean): number {
     return this.#view.getInt32(this.#consume(4), littleEndian);
   }
 
+  /**
+   * Reads an `int32` represented as _little-endian_ from this Decoder.
+   */
   int32LE(): number {
     return this.#int32(true);
   }
 
+  /**
+   * Reads an `int32` represented as _big-endian_ from this Decoder.
+   */
   int32BE(): number {
     return this.#int32(false);
+  }
+
+  #int40(littleEndian: boolean): number {
+    return Number(this.#decodeIntX(5, littleEndian));
+  }
+
+  /**
+   * Reads an `int40` represented as _little-endian_ from this Decoder.
+   */
+  int40LE(): number {
+    return this.#int40(true);
+  }
+
+  /**
+   * Reads an `int40` represented as _big-endian_ from this Decoder.
+   */
+  int40BE(): number {
+    return this.#int40(false);
+  }
+
+  #int48(littleEndian: boolean): number {
+    return Number(this.#decodeIntX(6, littleEndian));
+  }
+
+  /**
+   * Reads an `int48` represented as _little-endian_ from this Decoder.
+   */
+  int48LE(): number {
+    return this.#int48(true);
+  }
+
+  /**
+   * Reads an `int48` represented as _big-endian_ from this Decoder.
+   */
+  int48BE(): number {
+    return this.#int48(false);
+  }
+
+  #int56(littleEndian: boolean): bigint {
+    return this.#decodeIntX(7, littleEndian);
+  }
+
+  /**
+   * Reads an `int56` represented as _little-endian_ from this Decoder.
+   */
+  int56LE(): bigint {
+    return this.#int56(true);
+  }
+
+  /**
+   * Reads an `int56` represented as _big-endian_ from this Decoder.
+   */
+  int56BE(): bigint {
+    return this.#int56(false);
   }
 
   #int64(littleEndian: boolean): bigint {
     return this.#view.getBigInt64(this.#consume(8), littleEndian);
   }
 
+  /**
+   * Reads an `int64` represented as _little-endian_ from this Decoder.
+   */
   int64LE(): bigint {
     return this.#int64(true);
   }
 
+  /**
+   * Reads an `int64` represented as _big-endian_ from this Decoder.
+   */
   int64BE(): bigint {
     return this.#int64(false);
   }
 
+  /**
+   * Reads a `uint8` from this Decoder.
+   */
   uint8(): number {
     return this.#view.getUint8(this.#consume(1));
   }
@@ -181,52 +353,142 @@ export class Decoder {
     return this.#view.getUint16(this.#consume(2), littleEndian);
   }
 
+  /**
+   * Reads a `uint16` represented as _little-endian_ from this Decoder.
+   */
   uint16LE(): number {
     return this.#uint16(true);
   }
 
+  /**
+   * Reads a `uint16` represented as _big-endian_ from this Decoder.
+   */
   uint16BE(): number {
     return this.#uint16(false);
+  }
+
+  #uint24(littleEndian: boolean): number {
+    return Number(this.#decodeUintX(3, littleEndian));
+  }
+
+  /**
+   * Reads a `uint24` represented as _little-endian_ from this Decoder.
+   */
+  uint24LE(): number {
+    return this.#uint24(true);
+  }
+
+  /**
+   * Reads a `uint24` represented as _big-endian_ from this Decoder.
+   */
+  uint24BE(): number {
+    return this.#uint24(false);
   }
 
   #uint32(littleEndian: boolean): number {
     return this.#view.getUint32(this.#consume(4), littleEndian);
   }
 
+  /**
+   * Reads a `uint32` represented as _little-endian_ from this Decoder.
+   */
   uint32LE(): number {
     return this.#uint32(true);
   }
 
+  /**
+   * Reads a `uint32` represented as _big-endian_ from this Decoder.
+   */
   uint32BE(): number {
     return this.#uint32(false);
+  }
+
+  #uint40(littleEndian: boolean): number {
+    return Number(this.#decodeUintX(5, littleEndian));
+  }
+
+  /**
+   * Reads a `uint40` represented as _little-endian_ from this Decoder.
+   */
+  uint40LE(): number {
+    return this.#uint40(true);
+  }
+
+  /**
+   * Reads a `uint40` represented as _big-endian_ from this Decoder.
+   */
+  uint40BE(): number {
+    return this.#uint40(false);
+  }
+
+  #uint48(littleEndian: boolean): number {
+    return Number(this.#decodeUintX(6, littleEndian));
+  }
+
+  /**
+   * Reads a `uint48` represented as _little-endian_ from this Decoder.
+   */
+  uint48LE(): number {
+    return this.#uint48(true);
+  }
+
+  /**
+   * Reads a `uint48` represented as _big-endian_ from this Decoder.
+   */
+  uint48BE(): number {
+    return this.#uint48(false);
+  }
+
+  #uint56(littleEndian: boolean): bigint {
+    return this.#decodeUintX(7, littleEndian);
+  }
+
+  /**
+   * Reads a `uint56` represented as _little-endian_ from this Decoder.
+   */
+  uint56LE(): bigint {
+    return this.#uint56(true);
+  }
+
+  /**
+   * Reads a `uint56` represented as _big-endian_ from this Decoder.
+   */
+  uint56BE(): bigint {
+    return this.#uint56(false);
   }
 
   #uint64(littleEndian: boolean): bigint {
     return this.#view.getBigUint64(this.#consume(8), littleEndian);
   }
 
+  /**
+   * Reads a `uint64` represented as _little-endian_ from this Decoder.
+   */
   uint64LE(): bigint {
     return this.#uint64(true);
   }
 
+  /**
+   * Reads a `uint64` represented as _big-endian_ from this Decoder.
+   */
   uint64BE(): bigint {
     return this.#uint64(false);
   }
 
   #float16(littleEndian: boolean): number {
-    /* istanbul ignore if -- @preserve */
-    if (this.#view.setFloat16 === undefined) {
-      return get_float_16(this.#view, this.#consume(2), littleEndian);
-      /* istanbul ignore else -- @preserve */
-    } else {
-      return this.#view.getFloat16(this.#consume(2), littleEndian);
-    }
+    return this.#view.getFloat16(this.#consume(2), littleEndian);
   }
 
+  /**
+   * Reads a `float16` represented as _little-endian_ from this Decoder.
+   */
   float16LE(): number {
     return this.#float16(true);
   }
 
+  /**
+   * Reads a `float16` represented as _big-endian_ from this Decoder.
+   */
   float16BE(): number {
     return this.#float16(false);
   }
@@ -235,10 +497,16 @@ export class Decoder {
     return this.#view.getFloat32(this.#consume(4), littleEndian);
   }
 
+  /**
+   * Reads a `float32` represented as _little-endian_ from this Decoder.
+   */
   float32LE(): number {
     return this.#float32(true);
   }
 
+  /**
+   * Reads a `float32` represented as _big-endian_ from this Decoder.
+   */
   float32BE(): number {
     return this.#float32(false);
   }
@@ -247,16 +515,26 @@ export class Decoder {
     return this.#view.getFloat64(this.#consume(8), littleEndian);
   }
 
+  /**
+   * Reads a `float64` represented as _little-endian_ from this Decoder.
+   */
   float64LE(): number {
     return this.#float64(true);
   }
 
+  /**
+   * Reads a `float64` represented as _big-endian_ from this Decoder.
+   */
   float64BE(): number {
     return this.#float64(false);
   }
 
   /**
    * Reads an `Uint8Array` from this Decoder.
+   *
+   * > **INFO:** the returned array is a live subarray of the source bytes:
+   * mutations are visible on both sides. Treat it as readonly while this
+   * Decoder is not `done`.
    *
    * @param {number} [length] The length of the bytes to read.
    * @returns {Uint8Array} The read bytes.
@@ -303,26 +581,4 @@ export class Decoder {
   ): GValue {
     return JSON.parse(this.string(length), reviver);
   }
-
-  // /**
-  //  * Decodes an array of values.
-  //  *
-  //  * @param length
-  //  * @param decode
-  //  */
-  // iterable<GValue>(length: number = this.remaining, decode: DecodeFunction<GValue>): GValue[] {
-  //   const values: GValue[] = [];
-  //   const end: number = this.#cursor + length;
-  //   while (this.#cursor < end) {
-  //     values.push(decode(this));
-  //   }
-  //
-  //   if (this.#cursor !== end) {
-  //     throw new Error(
-  //       `Expected to decode ${length} bytes, but ${this.#cursor - end} where decoded instead (+${this.#cursor - end - length}).`,
-  //     );
-  //   }
-  //
-  //   return values;
-  // }
 }

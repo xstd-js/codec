@@ -5,18 +5,29 @@ import { BASE64_PADDING } from './constants.private/base64-padding.js';
 import { BASE64_URL_ALPHABET } from './constants.private/base64-url-alphabet.js';
 
 export interface ConvertBytesToBase64StringOptions {
+  /**
+   * The alphabet used to encode the bytes.
+   *
+   * @default 'base64'
+   */
   readonly alphabet?: 'base64' | 'base64url';
+
+  /**
+   * Omits the trailing `=` padding characters.
+   *
+   * @default false
+   */
   readonly omitPadding?: boolean;
 }
 
 /**
  * Reads `length` bytes from `input`,
- * encodes them in _base64_ format, and writes the result into `output`.`
+ * encodes them in _base64_ format, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
  * @param {number} [length] The length of the bytes to read and convert to base64 chars.
- * @param {ConvertBytesToBase64StringOptions} [options]
+ * @param {ConvertBytesToBase64StringOptions} [options] The conversion options.
  * @returns {Encoder} The `output` Encoder with the encoded bytes.
  */
 export function convertBytesToBase64String<GOutput extends Encoder>(
@@ -45,8 +56,6 @@ export function convertBytesToBase64String<GOutput extends Encoder>(
 
   if (inputRemainingLength === 1) {
     const byte: number = input.uint8();
-
-    // NOTE: if byte <= 0b00111111 AND omitPadding === true, should we add only 1 character ?.
 
     output.uint8(ALPHABET[(byte >> 2) & 0x3f]);
     output.uint8(ALPHABET[(byte << 4) & 0x3f]);

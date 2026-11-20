@@ -26,7 +26,7 @@ describe('Decoder', () => {
           Decoder.decode(new Uint8Array([1, 2]), (decoder: Decoder): number => {
             return decoder.uint8();
           }),
-        ).toThrow();
+        ).toThrow('1 bytes remaining.');
       });
     });
 
@@ -64,6 +64,13 @@ describe('Decoder', () => {
       expect(decoder.consumed).toBe(1);
       expect(decoder.remaining).toBe(0);
       expect(decoder.done).toBe(true);
+    });
+
+    test('size limit reached mid multi-byte read leaves the cursor untouched', () => {
+      const decoder = new Decoder(new Uint8Array([1, 2]));
+      expect(() => decoder.uint24LE()).toThrow('Size limit reached.');
+      expect(decoder.consumed).toBe(0);
+      expect(decoder.remaining).toBe(2);
     });
 
     describe('numbers', () => {
@@ -182,6 +189,180 @@ describe('Decoder', () => {
         });
       });
 
+      describe('uint24', () => {
+        test('uint24LE', () => {
+          const decoder = new Decoder(new Uint8Array([0x56, 0x34, 0x12]));
+          expect(decoder.uint24LE()).toBe(0x123456);
+          expect(decoder.consumed).toBe(3);
+        });
+
+        test('uint24BE', () => {
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56]));
+          expect(decoder.uint24BE()).toBe(0x123456);
+          expect(decoder.consumed).toBe(3);
+        });
+      });
+
+      describe('uint40', () => {
+        test('uint40LE', () => {
+          const decoder = new Decoder(new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(decoder.uint40LE()).toBe(0x1234567890);
+          expect(decoder.consumed).toBe(5);
+        });
+
+        test('uint40BE', () => {
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90]));
+          expect(decoder.uint40BE()).toBe(0x1234567890);
+          expect(decoder.consumed).toBe(5);
+        });
+      });
+
+      describe('uint48', () => {
+        test('uint48LE', () => {
+          const decoder = new Decoder(new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(decoder.uint48LE()).toBe(0x1234567890ab);
+          expect(decoder.consumed).toBe(6);
+        });
+
+        test('uint48BE', () => {
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab]));
+          expect(decoder.uint48BE()).toBe(0x1234567890ab);
+          expect(decoder.consumed).toBe(6);
+        });
+      });
+
+      describe('uint56', () => {
+        test('uint56LE', () => {
+          const decoder = new Decoder(new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12]));
+          expect(decoder.uint56LE()).toBe(0x1234567890abcdn);
+          expect(decoder.consumed).toBe(7);
+        });
+
+        test('uint56BE', () => {
+          const decoder = new Decoder(new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd]));
+          expect(decoder.uint56BE()).toBe(0x1234567890abcdn);
+          expect(decoder.consumed).toBe(7);
+        });
+      });
+
+      describe('int24', () => {
+        test('int24LE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0x00, 0x00, 0x80, 0x56, 0x34, 0x12, 0xff, 0xff, 0x7f,
+            ]),
+          );
+          expect(decoder.int24LE()).toBe(-1);
+          expect(decoder.int24LE()).toBe(-8388608);
+          expect(decoder.int24LE()).toBe(0x123456);
+          expect(decoder.int24LE()).toBe(0x7fffff);
+          expect(decoder.consumed).toBe(12);
+        });
+
+        test('int24BE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x12, 0x34, 0x56, 0x7f, 0xff, 0xff,
+            ]),
+          );
+          expect(decoder.int24BE()).toBe(-1);
+          expect(decoder.int24BE()).toBe(-8388608);
+          expect(decoder.int24BE()).toBe(0x123456);
+          expect(decoder.int24BE()).toBe(0x7fffff);
+          expect(decoder.consumed).toBe(12);
+        });
+      });
+
+      describe('int40', () => {
+        test('int40LE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x80, 0x90, 0x78, 0x56, 0x34,
+              0x12, 0xff, 0xff, 0xff, 0xff, 0x7f,
+            ]),
+          );
+          expect(decoder.int40LE()).toBe(-1);
+          expect(decoder.int40LE()).toBe(-549755813888);
+          expect(decoder.int40LE()).toBe(0x1234567890);
+          expect(decoder.int40LE()).toBe(0x7fffffffff);
+          expect(decoder.consumed).toBe(20);
+        });
+
+        test('int40BE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78,
+              0x90, 0x7f, 0xff, 0xff, 0xff, 0xff,
+            ]),
+          );
+          expect(decoder.int40BE()).toBe(-1);
+          expect(decoder.int40BE()).toBe(-549755813888);
+          expect(decoder.int40BE()).toBe(0x1234567890);
+          expect(decoder.int40BE()).toBe(0x7fffffffff);
+          expect(decoder.consumed).toBe(20);
+        });
+      });
+
+      describe('int48', () => {
+        test('int48LE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xab, 0x90,
+              0x78, 0x56, 0x34, 0x12, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+            ]),
+          );
+          expect(decoder.int48LE()).toBe(-1);
+          expect(decoder.int48LE()).toBe(-140737488355328);
+          expect(decoder.int48LE()).toBe(0x1234567890ab);
+          expect(decoder.int48LE()).toBe(0x7fffffffffff);
+          expect(decoder.consumed).toBe(24);
+        });
+
+        test('int48BE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34,
+              0x56, 0x78, 0x90, 0xab, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
+            ]),
+          );
+          expect(decoder.int48BE()).toBe(-1);
+          expect(decoder.int48BE()).toBe(-140737488355328);
+          expect(decoder.int48BE()).toBe(0x1234567890ab);
+          expect(decoder.int48BE()).toBe(0x7fffffffffff);
+          expect(decoder.consumed).toBe(24);
+        });
+      });
+
+      describe('int56', () => {
+        test('int56LE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+              0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+            ]),
+          );
+          expect(decoder.int56LE()).toBe(-1n);
+          expect(decoder.int56LE()).toBe(-36028797018963968n);
+          expect(decoder.int56LE()).toBe(0x1234567890abcdn);
+          expect(decoder.int56LE()).toBe(0x7fffffffffffffn);
+          expect(decoder.consumed).toBe(28);
+        });
+
+        test('int56BE', () => {
+          const decoder = new Decoder(
+            new Uint8Array([
+              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+              0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            ]),
+          );
+          expect(decoder.int56BE()).toBe(-1n);
+          expect(decoder.int56BE()).toBe(-36028797018963968n);
+          expect(decoder.int56BE()).toBe(0x1234567890abcdn);
+          expect(decoder.int56BE()).toBe(0x7fffffffffffffn);
+          expect(decoder.consumed).toBe(28);
+        });
+      });
+
       describe('float16', () => {
         test('float16LE', () => {
           const decoder = new Decoder(new Uint8Array([0x66, 0x2e]));
@@ -237,6 +418,20 @@ describe('Decoder', () => {
         expect(decoder.bytes()).toEqual(new Uint8Array([0, 1]));
         expect(decoder.consumed).toBe(2);
       });
+
+      test('a negative length throws and leaves the state untouched', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2, 3]));
+
+        expect(() => decoder.bytes(-1)).toThrow();
+        expect(decoder.consumed).toBe(0);
+      });
+
+      test('a non-integer length throws and leaves the state untouched', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2, 3]));
+
+        expect(() => decoder.bytes(1.5)).toThrow();
+        expect(decoder.consumed).toBe(0);
+      });
     });
 
     describe('string', () => {
@@ -279,108 +474,6 @@ describe('Decoder', () => {
           expect(decoder.consumed).toBe(2);
         });
       });
-
-      //       describe.skip('encoding=quoted-printable', () => {
-      //         test('quoted-printable string', () => {
-      //           const input =
-      //             `J'interdis aux marchands de vanter trop leurs marchandises. Car ils se font=
-      //  vite p=C3=A9dagogues et t'enseignent comme but ce qui n'est par essence qu=
-      // 'un moyen, et te trompant ainsi sur la route =C3=A0 suivre les voil=C3=A0 b=
-      // ient=C3=B4t qui te d=C3=A9gradent, car si leur musique est vulgaire ils te =
-      // fabriquent pour te la vendre une =C3=A2me vulgaire.
-      //
-      //    =E2=80=94=E2=80=89Antoine de Saint-Exup=C3=A9ry, Citadelle (1948)`.replaceAll('\n', '\r\n');
-      //
-      //           const output =
-      //             `J'interdis aux marchands de vanter trop leurs marchandises. Car ils se font vite pédagogues et t'enseignent comme but ce qui n'est par essence qu'un moyen, et te trompant ainsi sur la route à suivre les voilà bientôt qui te dégradent, car si leur musique est vulgaire ils te fabriquent pour te la vendre une âme vulgaire.
-      //
-      //    — Antoine de Saint-Exupéry, Citadelle (1948)`.replaceAll('\n', '\r\n');
-      //
-      //           const bytes: Uint8Array = new TextEncoder().encode(input);
-      //
-      //           const decoder = new Decoder(bytes);
-      //
-      //           expect(
-      //             decoder.string(decoder.remaining, {
-      //               encoding: 'quoted-printable',
-      //               sub: {
-      //                 encoding: 'utf-8',
-      //               },
-      //             }),
-      //           ).toBe(output);
-      //           expect(decoder.consumed).toBe(bytes.length);
-      //         });
-      //
-      //         describe('invalid quoted-printable string', () => {
-      //           describe('around equal sign: =XX', () => {
-      //             test('not enough chars after =', () => {
-      //               expect(() =>
-      //                 Decoder.string(new TextEncoder().encode('=C'), {
-      //                   encoding: 'quoted-printable',
-      //                 }),
-      //               ).toThrow();
-      //             });
-      //
-      //             test('not alphanumerical after =', () => {
-      //               expect(() =>
-      //                 Decoder.string(new TextEncoder().encode('=G0'), {
-      //                   encoding: 'quoted-printable',
-      //                 }),
-      //               ).toThrow();
-      //
-      //               expect(() =>
-      //                 Decoder.string(new TextEncoder().encode('=0G'), {
-      //                   encoding: 'quoted-printable',
-      //                 }),
-      //               ).toThrow();
-      //             });
-      //
-      //             test('expect LF after CR', () => {
-      //               expect(() =>
-      //                 Decoder.string(new TextEncoder().encode('=\rA'), {
-      //                   encoding: 'quoted-printable',
-      //                 }),
-      //               ).toThrow();
-      //             });
-      //           });
-      //
-      //           describe('around CRLF', () => {
-      //             test('not enough chars after CR', () => {
-      //               expect(() =>
-      //                 Decoder.string(new TextEncoder().encode('\r'), {
-      //                   encoding: 'quoted-printable',
-      //                 }),
-      //               ).toThrow();
-      //             });
-      //
-      //             test('expect LF after CR', () => {
-      //               expect(() =>
-      //                 Decoder.string(new TextEncoder().encode('\rA'), {
-      //                   encoding: 'quoted-printable',
-      //                 }),
-      //               ).toThrow();
-      //             });
-      //           });
-      //         });
-      //
-      //         describe('out of spec', () => {
-      //           test('lowercase alphanumerical after =', () => {
-      //             expect(
-      //               Decoder.string(new TextEncoder().encode('=3d'), {
-      //                 encoding: 'quoted-printable',
-      //               }),
-      //             ).toBe('=');
-      //           });
-      //
-      //           test('trailing white space', () => {
-      //             expect(
-      //               Decoder.string(new TextEncoder().encode('a   \r\n'), {
-      //                 encoding: 'quoted-printable',
-      //               }),
-      //             ).toBe('a\r\n');
-      //           });
-      //         });
-      //       });
     });
 
     describe('json', () => {
@@ -392,6 +485,100 @@ describe('Decoder', () => {
 
       test('invalid json', () => {
         expect(() => new Decoder(new Uint8Array([123])).json()).toThrow();
+      });
+    });
+
+    describe('toUint8Array', () => {
+      test('returns a live view over the consumed bytes', () => {
+        const bytes = new Uint8Array([1, 2, 3, 4]);
+        const decoder = new Decoder(bytes);
+        decoder.uint16LE();
+        const view = decoder.toUint8Array();
+        expect(view).toEqual(new Uint8Array([1, 2]));
+        view[0] = 9;
+        expect(bytes[0]).toBe(9);
+      });
+
+      test('handles subarray-sourced bytes (byteOffset)', () => {
+        const source = new Uint8Array([9, 1, 2, 3]);
+        const decoder = new Decoder(source.subarray(1));
+        decoder.uint16LE();
+        const view = decoder.toUint8Array();
+        expect(view).toEqual(new Uint8Array([1, 2]));
+        view[0] = 8;
+        expect(source[1]).toBe(8);
+      });
+    });
+
+    describe('complete', () => {
+      test('throws while bytes remain, passes once done', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2]));
+        decoder.uint8();
+        expect(() => decoder.complete()).toThrow('1 bytes remaining.');
+        decoder.uint8();
+        expect(() => decoder.complete()).not.toThrow();
+      });
+    });
+
+    describe('decode', () => {
+      test('decodes with the provided function', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2]));
+        expect(decoder.decode((d: Decoder): number => d.uint16LE())).toBe(0x0201);
+      });
+    });
+
+    describe('fork', () => {
+      test('decodes a bounded window and advances this Decoder', () => {
+        const decoder = new Decoder(new Uint8Array([0x03, 0x61, 0x62, 0x63, 0xff]));
+        expect(decoder.uint8()).toBe(3);
+        expect(decoder.fork(3, (d: Decoder): string => d.string(3, { encoding: 'binary' }))).toBe(
+          'abc',
+        );
+        expect(decoder.consumed).toBe(4);
+        expect(decoder.remaining).toBe(1);
+      });
+
+      test('leaves this Decoder untouched when the child is incomplete', () => {
+        const decoder = new Decoder(new Uint8Array([0x02, 0x61, 0xff]));
+        decoder.uint8();
+        expect(() => decoder.fork(2, (d: Decoder): number => d.uint8())).toThrow(
+          '1 bytes remaining.',
+        );
+        expect(decoder.consumed).toBe(1);
+        expect(decoder.remaining).toBe(2);
+      });
+
+      test('leaves this Decoder untouched when decode throws', () => {
+        const decoder = new Decoder(new Uint8Array([0x02, 0x61, 0xff]));
+        decoder.uint8();
+        expect(() =>
+          decoder.fork(2, (d: Decoder): number => {
+            d.uint8();
+            throw new Error('checksum mismatch');
+          }),
+        ).toThrow('checksum mismatch');
+        expect(decoder.consumed).toBe(1);
+        expect(decoder.remaining).toBe(2);
+      });
+
+      test('supports a zero-length window', () => {
+        const decoder = new Decoder(new Uint8Array([0x01]));
+        expect(decoder.fork(0, (d: Decoder): number => d.remaining)).toBe(0);
+        expect(decoder.consumed).toBe(0);
+      });
+
+      test('rejects invalid lengths', () => {
+        const decoder = new Decoder(new Uint8Array([1]));
+        expect(() => decoder.fork(-1, () => undefined)).toThrow('Invalid length: -1.');
+        expect(() => decoder.fork(1.5, () => undefined)).toThrow('Invalid length: 1.5.');
+        expect(() => decoder.fork(NaN, () => undefined)).toThrow('Invalid length: NaN.');
+        expect(() => decoder.fork(Infinity, () => undefined)).toThrow('Invalid length: Infinity.');
+      });
+
+      test('rejects over-reads before running the child', () => {
+        const decoder = new Decoder(new Uint8Array([1, 2]));
+        expect(() => decoder.fork(3, () => undefined)).toThrow('Size limit reached.');
+        expect(decoder.consumed).toBe(0);
       });
     });
   });

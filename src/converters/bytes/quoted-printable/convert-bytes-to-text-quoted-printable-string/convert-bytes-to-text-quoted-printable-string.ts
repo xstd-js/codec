@@ -9,7 +9,7 @@ import { QUOTED_PRINTABLE_MAX_LINE_LENGTH } from '../helpers.private/quoted-prin
 
 /**
  * Reads `length` bytes from `input`,
- * encodes them in _quoted-printable_ with a "text" format, and writes the result into `output`.`
+ * encodes them in _quoted-printable_ with a "text" format, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
@@ -58,13 +58,14 @@ export function convertBytesToTextQuotedPrintableString<GOutput extends Encoder>
       if (
         isSafeQuotedPrintableChar(byte) ||
         (isTabOrSpace(byte) &&
+          /* not the last byte of the input (RFC 2045 rule #3: a TAB/SPACE must
+             not terminate an encoded line, a decoder would strip it) */
+          i !== inputLengthMinusOne &&
           /* not followed by a line break */
           !(
-            (
-              i < inputLengthMinusTwo &&
-              inputBytes[i + 1] === 0x0d /* \r */ &&
-              inputBytes[i + 2] === 0x0a
-            ) /* \n */
+            i < inputLengthMinusTwo &&
+            inputBytes[i + 1] === 0x0d /* \r */ &&
+            inputBytes[i + 2] === 0x0a /* \n */
           ))
       ) {
         sequence[0] = byte;
@@ -72,7 +73,7 @@ export function convertBytesToTextQuotedPrintableString<GOutput extends Encoder>
       } else {
         // -> `byte` is NOT safe
         // -> `byte` must be encoded
-        sequence[0] = 0x3d /* = */;
+        sequence[0] = 0x3d; /* = */
         sequence[1] = numberToSingleAlphanumeric(byte >> 4, true);
         sequence[2] = numberToSingleAlphanumeric(byte & 0x0f, true);
         sequenceLength = 3;

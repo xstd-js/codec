@@ -2,42 +2,64 @@
   "name": "@xstd/codec",
   "version": "0.7.1",
   "type": "module",
-  "main": "./index.js",
-  "scripts": {
-    "fb:build": "node fabrique/actions/cli/build.cli.js",
-    "fb:format": "prettier --write --ignore-unknown --config ./.prettierrc \"src/**/*.{js,jsx,ts,tsx,html,css,scss}\"",
-    "fb:test": "vitest",
-    "fb:test:coverage": "vitest run --coverage",
-    "fb:bench": "vitest bench",
-    "fb:typedoc": "typedoc --options typedoc.json --tsconfig tsconfig.json",
-    "fb:prod": "node fabrique/actions/cli/build-and-publish.cli.js --mode prod",
-    "fb:dev": "node fabrique/actions/cli/build-and-publish.cli.js --mode dev",
-    "fb:rc": "node fabrique/actions/cli/build-and-publish.cli.js --mode rc"
-  },
-  "description": "Encoder and Decoder implementations",
+  "description": "Transform any value into bytes and back: an Encoder and a Decoder for numbers, strings and JSON, with chainable streaming converters (base64, hex, quoted-printable).",
   "keywords": [
     "encoder",
-    "decoder"
+    "decoder",
+    "codec",
+    "bytes",
+    "binary",
+    "uint8array",
+    "serialization",
+    "base64",
+    "hex",
+    "quoted-printable",
+    "transcoder"
   ],
   "author": "Valentin Richard",
   "license": "MIT",
-  "access": "public",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xstd-js/codec.git"
   },
-  "devDependencies": {
-    "@types/node": "^24.7.0",
-    "@vitest/coverage-istanbul": "^3.2.4",
-    "prettier": "^3.6.2",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "typedoc": "^0.28.13",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+  "packageManager": "yarn@4.18.1",
+  "main": "./index.js",
+  "scripts": {
+    "=== FB: BUILD ===": "",
+    "fb:build": "fabrique build",
+    "=== FB: TEST ===": "",
+    "fb:test": "vitest run",
+    "fb:test:coverage": "vitest run --coverage",
+    "fb:bench": "vitest bench",
+    "=== FB: CODE QUALITY ===": "",
+    "fb:format": "yarn fb:format:fix",
+    "fb:format:check": "prettier --check --ignore-unknown --config .prettierrc \"./**/*.{js,jsx,ts,tsx,html,css,scss,json,md}\"",
+    "fb:format:fix": "prettier --write --ignore-unknown --config .prettierrc \"./**/*.{js,jsx,ts,tsx,html,css,scss,json,md}\"",
+    "fb:check": "yarn fb:check:types && yarn fb:format:check",
+    "fb:check:types": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
+    "=== FB: RELEASE ===": "",
+    "fb:manual:release": "fabrique release",
+    "fb:ci:release": "fabrique ci release",
+    "=== FB: INIT ===": "",
+    "fb:setup-github-repository": "fabrique setup-github-repository"
   },
-  "packageManager": "yarn@4.10.3",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-istanbul": "^5.1.1",
+    "fabrique": "2.0.38",
+    "prettier": "^3.10.1",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "npm:typescript@~6.0.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "access": "public",
+  "engines": {
+    "node": ">=24"
+  },
   "fabrique": {
-    "version": "1.0.8",
+    "version": "2.0.38",
     "type": "lib"
   }
 }

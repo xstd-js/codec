@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { Encoder } from '../../../encoder/encoder.js';
 import {
   convertBytesToQuotedPrintableString,
-  ConvertBytesToQuotedPrintableStringOptions,
+  type ConvertBytesToQuotedPrintableStringOptions,
 } from './convert-bytes-to-quoted-printable-string.js';
 
 describe('convertBytesToQuotedPrintableString', () => {

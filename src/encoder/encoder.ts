@@ -1,5 +1,6 @@
 import { Decoder } from '../decoder/decoder.js';
-import { set_float_16 } from '../functions.private/f16/set_float_16/set_float_16.js';
+import { TEXT_ENCODER } from './constants.private/text-encoder.js';
+import { computeGrownByteLength } from './helpers.private/compute-grown-byte-length/compute-grown-byte-length.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
 
@@ -10,7 +11,7 @@ export interface EncoderOptions {
   /**
    * The _initial_ allocated byte length
    *
-   * - _range_: `[0, 0x100000000]`
+   * - _range_: `[0, 0x100000000]` — values out of this range, or non-safe-integers, throw a `RangeError`.
    *
    * @default 0x100
    */
@@ -19,7 +20,7 @@ export interface EncoderOptions {
   /**
    * The _max_ allocated byte length
    *
-   * - _range_: `[initialByteLength, 0x100000000]`
+   * - _range_: `[initialByteLength, 0x100000000]` — values out of this range, or non-safe-integers, throw a `RangeError`.
    *
    * @default 0x100000000
    */
@@ -55,7 +56,7 @@ export class Encoder {
    * ```ts
    * function encodeBinaryString(encoder: Encoder, input: string): void {
    *   encoder
-   *     .int16LE(input)
+   *     .int16LE(input.length)
    *     .string(input, { encoding: 'binary' });
    * }
    *
@@ -71,7 +72,7 @@ export class Encoder {
   }
 
   /**
-   * Encodes a `string`.
+   * Encodes a `string` into bytes.
    */
   static string(value: string, options?: EncoderStringOptions): Uint8Array {
     return this.encode<string>(value, (encoder: Encoder): void => {
@@ -80,14 +81,16 @@ export class Encoder {
   }
 
   /**
-   * Encodes a `json` value.
+   * Encodes a `json` value as its `JSON.stringify(...)` representation, converted to UTF-8 bytes.
    */
   static json(
     value: any,
     replacer?: (this: any, key: string, value: any) => any,
     space?: string | number,
   ): Uint8Array {
-    return new TextEncoder().encode(JSON.stringify(value, replacer, space));
+    return this.encode(value, (encoder: Encoder): void => {
+      encoder.json(value, replacer, space);
+    });
   }
 
   // the raw buffer containing the bytes.
@@ -100,8 +103,21 @@ export class Encoder {
   #cursor: number;
 
   constructor({ initialByteLength = 0x100, maxByteLength = 0x100000000 }: EncoderOptions = {}) {
-    initialByteLength = Math.max(0, Math.min(0x100000000, Math.floor(initialByteLength)));
-    maxByteLength = Math.max(initialByteLength, Math.min(0x100000000, Math.floor(maxByteLength)));
+    if (
+      !Number.isSafeInteger(initialByteLength) ||
+      initialByteLength < 0 ||
+      initialByteLength > 0x100000000
+    ) {
+      throw new RangeError(`Invalid initialByteLength: ${initialByteLength}.`);
+    }
+
+    if (
+      !Number.isSafeInteger(maxByteLength) ||
+      maxByteLength < initialByteLength ||
+      maxByteLength > 0x100000000
+    ) {
+      throw new RangeError(`Invalid maxByteLength: ${maxByteLength}.`);
+    }
 
     this.#buffer = new ArrayBuffer(initialByteLength, {
       maxByteLength,
@@ -125,17 +141,7 @@ export class Encoder {
     }
 
     if (newCursor > this.#buffer.byteLength) {
-      this.#buffer.resize(
-        Math.min(
-          this.#buffer.maxByteLength,
-          (1 <<
-            Math.ceil(
-              Math.log2(newCursor) /* number of bytes to store the data */ +
-                0.5 /* adds a "half-byte" of margin */,
-            )) /* round to the upper limit */ >>>
-            0,
-        ),
-      );
+      this.#buffer.resize(computeGrownByteLength(newCursor, this.#buffer.maxByteLength));
     }
 
     this.#cursor = newCursor;
@@ -152,11 +158,18 @@ export class Encoder {
 
   /**
    * Returns an `Uint8Array` containing the encoded values.
+   *
+   * > **INFO:** the returned array is a zero-copy view over this Encoder's
+   * internal buffer: mutating it mutates the Encoder state, and it retains
+   * the whole backing buffer even after the Encoder is discarded.
    */
   toUint8Array(): Uint8Array {
     return new Uint8Array(this.#buffer, 0, this.#cursor);
   }
 
+  /**
+   * Creates a new `Decoder` from the bytes encoded so far in this Encoder.
+   */
   toDecoder(): Decoder {
     return new Decoder(this.toUint8Array());
   }
@@ -164,6 +177,14 @@ export class Encoder {
   /*
      INFO: All the following methods return `this`, enabling us to chain them.
      INFO: Each _write_ moves the `cursor` and grows the encoded bytes.
+     INFO: Integer writes use DataView semantics: values wrap modulo 2^bits
+           (two's complement for negatives).
+     INFO: All writes are atomic — if the size limit is reached, the write
+           throws before moving the cursor, leaving `length` unchanged —
+           except `string({ encoding: 'binary' })`, which validates characters
+           while writing: if it throws, the bytes written so far are left in
+           an unspecified state: discard the Encoder instance rather than
+           reusing it.
    */
 
   /**
@@ -176,7 +197,7 @@ export class Encoder {
    * ```ts
    * function encodeBinaryString(encoder: Encoder, input: string): void {
    *   encoder
-   *     .int16LE(input)
+   *     .int16LE(input.length) // encodes the string's length
    *     .string(input, { encoding: 'binary' });
    * }
    *
@@ -192,7 +213,7 @@ export class Encoder {
   }
 
   /**
-   * Writes an `int8` in this Encoder, and moves the cursor of 1 byte for the next _write_
+   * Writes an `int8` in this Encoder.
    */
   int8(value: number): this {
     this.#view.setInt8(this.#alloc(1), value);
@@ -218,36 +239,141 @@ export class Encoder {
     return this.#int16(value, false);
   }
 
+  #encodeUintX(value: bigint | number, bytes: number, littleEndian: boolean): void {
+    // NOTE: `BigInt.asUintN` makes the two's complement wrap deterministic:
+    // `DataView.setBigUint64` itself rejects negative BigInts on some engines.
+    // NOTE: the conversion runs *before* the allocation so that a failed
+    // conversion (e.g. a non-integer number) leaves the cursor untouched.
+    const packed: bigint = BigInt.asUintN(64, BigInt(value));
+    const start: number = this.#alloc(bytes);
+
+    for (let i: number = 0; i < bytes; i++) {
+      const shift: bigint = BigInt(littleEndian ? i : bytes - 1 - i) * 8n;
+      this.#bytes[start + i] = Number((packed >> shift) & 0xffn);
+    }
+  }
+
+  #int24(value: number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 3, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes an `int24` represented as _little-endian_ in this Encoder.
+   */
+  int24LE(value: number): this {
+    return this.#int24(value, true);
+  }
+
+  /**
+   * Writes an `int24` represented as _big-endian_ in this Encoder.
+   */
+  int24BE(value: number): this {
+    return this.#int24(value, false);
+  }
+
   #int32(value: number, littleEndian: boolean): this {
     this.#view.setInt32(this.#alloc(4), value, littleEndian);
     return this;
   }
 
+  /**
+   * Writes an `int32` represented as _little-endian_ in this Encoder.
+   */
   int32LE(value: number): this {
     return this.#int32(value, true);
   }
 
+  /**
+   * Writes an `int32` represented as _big-endian_ in this Encoder.
+   */
   int32BE(value: number): this {
     return this.#int32(value, false);
   }
 
-  #int64(value: bigint | number, littleEndian: boolean): this {
-    this.#view.setBigInt64(
-      this.#alloc(8),
-      typeof value === 'number' ? BigInt(value) : value,
-      littleEndian,
-    );
+  #int40(value: number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 5, littleEndian);
     return this;
   }
 
+  /**
+   * Writes an `int40` represented as _little-endian_ in this Encoder.
+   */
+  int40LE(value: number): this {
+    return this.#int40(value, true);
+  }
+
+  /**
+   * Writes an `int40` represented as _big-endian_ in this Encoder.
+   */
+  int40BE(value: number): this {
+    return this.#int40(value, false);
+  }
+
+  #int48(value: number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 6, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes an `int48` represented as _little-endian_ in this Encoder.
+   */
+  int48LE(value: number): this {
+    return this.#int48(value, true);
+  }
+
+  /**
+   * Writes an `int48` represented as _big-endian_ in this Encoder.
+   */
+  int48BE(value: number): this {
+    return this.#int48(value, false);
+  }
+
+  #int56(value: bigint | number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 7, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes an `int56` represented as _little-endian_ in this Encoder.
+   */
+  int56LE(value: bigint | number): this {
+    return this.#int56(value, true);
+  }
+
+  /**
+   * Writes an `int56` represented as _big-endian_ in this Encoder.
+   */
+  int56BE(value: bigint | number): this {
+    return this.#int56(value, false);
+  }
+
+  #int64(value: bigint | number, littleEndian: boolean): this {
+    // NOTE: the conversion runs *before* the allocation so that a failed
+    // conversion (e.g. a non-integer number) leaves the cursor untouched.
+    const bigIntValue: bigint = typeof value === 'number' ? BigInt(value) : value;
+
+    this.#view.setBigInt64(this.#alloc(8), bigIntValue, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes an `int64` represented as _little-endian_ in this Encoder.
+   */
   int64LE(value: bigint | number): this {
     return this.#int64(value, true);
   }
 
+  /**
+   * Writes an `int64` represented as _big-endian_ in this Encoder.
+   */
   int64BE(value: bigint | number): this {
     return this.#int64(value, false);
   }
 
+  /**
+   * Writes a `uint8` in this Encoder.
+   */
   uint8(value: number): this {
     this.#view.setUint8(this.#alloc(1), value);
     return this;
@@ -258,12 +384,37 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `uint16` represented as _little-endian_ in this Encoder.
+   */
   uint16LE(value: number): this {
     return this.#uint16(value, true);
   }
 
+  /**
+   * Writes a `uint16` represented as _big-endian_ in this Encoder.
+   */
   uint16BE(value: number): this {
     return this.#uint16(value, false);
+  }
+
+  #uint24(value: number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 3, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes a `uint24` represented as _little-endian_ in this Encoder.
+   */
+  uint24LE(value: number): this {
+    return this.#uint24(value, true);
+  }
+
+  /**
+   * Writes a `uint24` represented as _big-endian_ in this Encoder.
+   */
+  uint24BE(value: number): this {
+    return this.#uint24(value, false);
   }
 
   #uint32(value: number, littleEndian: boolean): this {
@@ -271,46 +422,115 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `uint32` represented as _little-endian_ in this Encoder.
+   */
   uint32LE(value: number): this {
     return this.#uint32(value, true);
   }
 
+  /**
+   * Writes a `uint32` represented as _big-endian_ in this Encoder.
+   */
   uint32BE(value: number): this {
     return this.#uint32(value, false);
   }
 
-  #uint64(value: bigint | number, littleEndian: boolean): this {
-    this.#view.setBigUint64(
-      this.#alloc(8),
-      typeof value === 'number' ? BigInt(value) : value,
-      littleEndian,
-    );
+  #uint40(value: number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 5, littleEndian);
     return this;
   }
 
+  /**
+   * Writes a `uint40` represented as _little-endian_ in this Encoder.
+   */
+  uint40LE(value: number): this {
+    return this.#uint40(value, true);
+  }
+
+  /**
+   * Writes a `uint40` represented as _big-endian_ in this Encoder.
+   */
+  uint40BE(value: number): this {
+    return this.#uint40(value, false);
+  }
+
+  #uint48(value: number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 6, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes a `uint48` represented as _little-endian_ in this Encoder.
+   */
+  uint48LE(value: number): this {
+    return this.#uint48(value, true);
+  }
+
+  /**
+   * Writes a `uint48` represented as _big-endian_ in this Encoder.
+   */
+  uint48BE(value: number): this {
+    return this.#uint48(value, false);
+  }
+
+  #uint56(value: bigint | number, littleEndian: boolean): this {
+    this.#encodeUintX(value, 7, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes a `uint56` represented as _little-endian_ in this Encoder.
+   */
+  uint56LE(value: bigint | number): this {
+    return this.#uint56(value, true);
+  }
+
+  /**
+   * Writes a `uint56` represented as _big-endian_ in this Encoder.
+   */
+  uint56BE(value: bigint | number): this {
+    return this.#uint56(value, false);
+  }
+
+  #uint64(value: bigint | number, littleEndian: boolean): this {
+    // NOTE: the conversion runs *before* the allocation so that a failed
+    // conversion (e.g. a non-integer number) leaves the cursor untouched.
+    const bigIntValue: bigint = typeof value === 'number' ? BigInt(value) : value;
+
+    this.#view.setBigUint64(this.#alloc(8), bigIntValue, littleEndian);
+    return this;
+  }
+
+  /**
+   * Writes a `uint64` represented as _little-endian_ in this Encoder.
+   */
   uint64LE(value: bigint | number): this {
     return this.#uint64(value, true);
   }
 
+  /**
+   * Writes a `uint64` represented as _big-endian_ in this Encoder.
+   */
   uint64BE(value: bigint | number): this {
     return this.#uint64(value, false);
   }
 
   #float16(value: number, littleEndian: boolean): this {
-    /* istanbul ignore if -- @preserve */
-    if (this.#view.setFloat16 === undefined) {
-      set_float_16(this.#view, this.#alloc(2), value, littleEndian);
-      /* istanbul ignore else -- @preserve */
-    } else {
-      this.#view.setFloat16(this.#alloc(2), value, littleEndian);
-    }
+    this.#view.setFloat16(this.#alloc(2), value, littleEndian);
     return this;
   }
 
+  /**
+   * Writes a `float16` represented as _little-endian_ in this Encoder.
+   */
   float16LE(value: number): this {
     return this.#float16(value, true);
   }
 
+  /**
+   * Writes a `float16` represented as _big-endian_ in this Encoder.
+   */
   float16BE(value: number): this {
     return this.#float16(value, false);
   }
@@ -320,10 +540,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `float32` represented as _little-endian_ in this Encoder.
+   */
   float32LE(value: number): this {
     return this.#float32(value, true);
   }
 
+  /**
+   * Writes a `float32` represented as _big-endian_ in this Encoder.
+   */
   float32BE(value: number): this {
     return this.#float32(value, false);
   }
@@ -333,10 +559,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `float64` represented as _little-endian_ in this Encoder.
+   */
   float64LE(value: number): this {
     return this.#float64(value, true);
   }
 
+  /**
+   * Writes a `float64` represented as _big-endian_ in this Encoder.
+   */
   float64BE(value: number): this {
     return this.#float64(value, false);
   }
@@ -349,68 +581,6 @@ export class Encoder {
     return this;
   }
 
-  // arrayBufferView(
-  //   value:
-  //     | Uint8Array
-  //     | Uint16Array
-  //     | Uint32Array
-  //     | BigUint64Array
-  //     | Int8Array
-  //     | Int16Array
-  //     | Int32Array
-  //     | BigInt64Array
-  //     | Float16Array
-  //     | Float32Array
-  //     | Float64Array,
-  //   littleEndian: boolean = this.#littleEndian,
-  // ): void {
-  //   if (value instanceof Uint8Array) {
-  //     this.bytes(value);
-  //   } else {
-  //     if (value instanceof Int8Array || isLittleEndianPlatform() === littleEndian) {
-  //       this.bytes(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
-  //     } else {
-  //       if (value instanceof Uint16Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.uint16(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Uint32Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.uint32(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof BigUint64Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.uint64(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Int16Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.int16(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Int32Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.int32(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof BigInt64Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.int64(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Float16Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.float16(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Float32Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.float32(value[i], littleEndian);
-  //         }
-  //       } else if (value instanceof Float64Array) {
-  //         for (let i: number = 0; i < value.length; i++) {
-  //           this.float64(value[i], littleEndian);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
   /**
    * Writes a `string` in this Encoder.
    *
@@ -422,7 +592,7 @@ export class Encoder {
   string(value: string, { encoding = 'utf-8' }: EncoderStringOptions = {}): this {
     switch (encoding) {
       case 'utf-8':
-        this.bytes(new TextEncoder().encode(value));
+        this.bytes(TEXT_ENCODER.encode(value));
         break;
       case 'binary': {
         const length: number = value.length;
@@ -449,13 +619,23 @@ export class Encoder {
 
   /**
    * Stringify `value` using `JSON.stringify(...)` and writes the result in this Encoder.
+   *
+   * > **INFO:** throws an `Error` when `JSON.stringify(...)` returns `undefined`
+   * (e.g. for a top-level `undefined`, function or symbol), instead of writing
+   * nothing.
    */
   json(
     value: any,
     replacer?: (this: any, key: string, value: any) => any,
     space?: string | number,
   ): this {
-    return this.string(JSON.stringify(value, replacer, space));
+    const json: string | undefined = JSON.stringify(value, replacer, space);
+
+    if (json === undefined) {
+      throw new Error('Cannot encode value: JSON.stringify returned undefined.');
+    }
+
+    return this.string(json);
   }
 
   /**

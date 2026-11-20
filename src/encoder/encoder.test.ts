@@ -13,6 +13,39 @@ describe('Encoder', () => {
     expect(bytes).toEqual(new Uint8Array([3, 0, 97, 98, 99]));
   });
 
+  describe('constructor', () => {
+    test('rejects invalid initialByteLength', () => {
+      expect(() => new Encoder({ initialByteLength: -1 })).toThrow(
+        'Invalid initialByteLength: -1.',
+      );
+      expect(() => new Encoder({ initialByteLength: 0.5 })).toThrow(
+        'Invalid initialByteLength: 0.5.',
+      );
+      expect(() => new Encoder({ initialByteLength: 0x100000001 })).toThrow(
+        'Invalid initialByteLength: 4294967297.',
+      );
+      expect(() => new Encoder({ initialByteLength: NaN })).toThrow(
+        'Invalid initialByteLength: NaN.',
+      );
+    });
+
+    test('rejects invalid maxByteLength', () => {
+      expect(() => new Encoder({ initialByteLength: 8, maxByteLength: 4 })).toThrow(
+        'Invalid maxByteLength: 4.',
+      );
+      expect(() => new Encoder({ maxByteLength: 0x100000001 })).toThrow(
+        'Invalid maxByteLength: 4294967297.',
+      );
+      expect(() => new Encoder({ maxByteLength: Infinity })).toThrow(
+        'Invalid maxByteLength: Infinity.',
+      );
+    });
+
+    test('accepts the inclusive upper bound', () => {
+      expect(() => new Encoder({ maxByteLength: 0x100000000 })).not.toThrow();
+    });
+  });
+
   describe('static methods', () => {
     describe('encode', () => {
       it('should be able to encode a binary string', () => {
@@ -67,6 +100,62 @@ describe('Encoder', () => {
 
         // excess limit
         expect(() => encoder.uint8(2)).toThrow();
+      });
+
+      test('size limit reached mid multi-byte write', () => {
+        const encoder = new Encoder({ initialByteLength: 4, maxByteLength: 4 });
+        encoder.uint32LE(0x12345678);
+        expect(() => encoder.uint24LE(0x123456)).toThrow('Size limit reached.');
+        expect(encoder.length).toBe(4);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
+      });
+
+      test('size limit reached mid multi-byte write leaves no partial bytes', () => {
+        const encoder = new Encoder({ initialByteLength: 5, maxByteLength: 5 });
+        encoder.uint32LE(0x12345678);
+        expect(() => encoder.uint24LE(0x123456)).toThrow('Size limit reached.');
+        expect(encoder.length).toBe(4);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
+      });
+
+      test('size limit reached on bytes write leaves no partial bytes', () => {
+        const encoder = new Encoder({ initialByteLength: 4, maxByteLength: 4 });
+        encoder.uint32LE(0x12345678);
+        expect(() => encoder.bytes(new Uint8Array([1, 2, 3]))).toThrow('Size limit reached.');
+        expect(encoder.length).toBe(4);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
+      });
+
+      test('size limit reached on utf-8 string write leaves no partial bytes', () => {
+        const encoder = new Encoder({ initialByteLength: 4, maxByteLength: 4 });
+        encoder.uint32LE(0x12345678);
+        expect(() => encoder.string('abc', { encoding: 'utf-8' })).toThrow('Size limit reached.');
+        expect(encoder.length).toBe(4);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
+      });
+
+      test('failed int24 write (non-integer) leaves no partial bytes', () => {
+        const encoder = new Encoder();
+        encoder.uint8(0xaa);
+        expect(() => encoder.int24LE(1.5)).toThrow(RangeError);
+        expect(encoder.length).toBe(1);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0xaa]));
+      });
+
+      test('failed int64 write (non-integer) leaves no partial bytes', () => {
+        const encoder = new Encoder();
+        encoder.uint8(0xaa);
+        expect(() => encoder.int64LE(1.5)).toThrow(RangeError);
+        expect(encoder.length).toBe(1);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0xaa]));
+      });
+
+      test('failed uint64 write (non-integer) leaves no partial bytes', () => {
+        const encoder = new Encoder();
+        encoder.uint8(0xaa);
+        expect(() => encoder.uint64LE(1.5)).toThrow(RangeError);
+        expect(encoder.length).toBe(1);
+        expect(encoder.toUint8Array()).toEqual(new Uint8Array([0xaa]));
       });
     });
 
@@ -236,6 +325,169 @@ describe('Encoder', () => {
         });
       });
 
+      describe('uint24', () => {
+        test('uint24LE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint24LE(0x123456).toUint8Array()).toEqual(
+            new Uint8Array([0x56, 0x34, 0x12]),
+          );
+          expect(encoder.length).toBe(3);
+        });
+
+        test('uint24BE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint24BE(0x123456).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56]),
+          );
+          expect(encoder.length).toBe(3);
+        });
+      });
+
+      describe('uint40', () => {
+        test('uint40LE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint40LE(0x1234567890).toUint8Array()).toEqual(
+            new Uint8Array([0x90, 0x78, 0x56, 0x34, 0x12]),
+          );
+          expect(encoder.length).toBe(5);
+        });
+
+        test('uint40BE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint40BE(0x1234567890).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90]),
+          );
+          expect(encoder.length).toBe(5);
+        });
+      });
+
+      describe('uint48', () => {
+        test('uint48LE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint48LE(0x1234567890ab).toUint8Array()).toEqual(
+            new Uint8Array([0xab, 0x90, 0x78, 0x56, 0x34, 0x12]),
+          );
+          expect(encoder.length).toBe(6);
+        });
+
+        test('uint48BE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint48BE(0x1234567890ab).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab]),
+          );
+          expect(encoder.length).toBe(6);
+        });
+      });
+
+      describe('uint56', () => {
+        test('uint56LE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint56LE(0x1234567890abcdn).toUint8Array()).toEqual(
+            new Uint8Array([0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12]),
+          );
+          expect(encoder.length).toBe(7);
+        });
+
+        test('uint56BE', () => {
+          const encoder = new Encoder();
+          expect(encoder.uint56BE(0x1234567890abcdn).toUint8Array()).toEqual(
+            new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd]),
+          );
+          expect(encoder.length).toBe(7);
+        });
+      });
+
+      describe('int24', () => {
+        test('int24LE', () => {
+          expect(new Encoder().int24LE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int24LE(-8388608).toUint8Array()).toEqual(
+            new Uint8Array([0x00, 0x00, 0x80]),
+          );
+          expect(new Encoder().int24LE(0x123456).toUint8Array()).toEqual(
+            new Uint8Array([0x56, 0x34, 0x12]),
+          );
+          expect(new Encoder().int24LE(0x123456).length).toBe(3);
+        });
+
+        test('int24BE', () => {
+          expect(new Encoder().int24BE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int24BE(-8388608).toUint8Array()).toEqual(
+            new Uint8Array([0x80, 0x00, 0x00]),
+          );
+          expect(new Encoder().int24BE(0x123456).length).toBe(3);
+        });
+      });
+
+      describe('int40', () => {
+        test('int40LE', () => {
+          expect(new Encoder().int40LE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int40LE(-549755813888).toUint8Array()).toEqual(
+            new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x80]),
+          );
+          expect(new Encoder().int40LE(0x1234567890).length).toBe(5);
+        });
+
+        test('int40BE', () => {
+          expect(new Encoder().int40BE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int40BE(-549755813888).toUint8Array()).toEqual(
+            new Uint8Array([0x80, 0x00, 0x00, 0x00, 0x00]),
+          );
+          expect(new Encoder().int40BE(0x1234567890).length).toBe(5);
+        });
+      });
+
+      describe('int48', () => {
+        test('int48LE', () => {
+          expect(new Encoder().int48LE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int48LE(-140737488355328).toUint8Array()).toEqual(
+            new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00, 0x80]),
+          );
+          expect(new Encoder().int48LE(0x1234567890ab).length).toBe(6);
+        });
+
+        test('int48BE', () => {
+          expect(new Encoder().int48BE(-1).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int48BE(-140737488355328).toUint8Array()).toEqual(
+            new Uint8Array([0x80, 0x00, 0x00, 0x00, 0x00, 0x00]),
+          );
+          expect(new Encoder().int48BE(0x1234567890ab).length).toBe(6);
+        });
+      });
+
+      describe('int56', () => {
+        test('int56LE', () => {
+          expect(new Encoder().int56LE(-1n).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int56LE(-36028797018963968n).toUint8Array()).toEqual(
+            new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80]),
+          );
+          expect(new Encoder().int56LE(0x1234567890abcdn).length).toBe(7);
+        });
+
+        test('int56BE', () => {
+          expect(new Encoder().int56BE(-1n).toUint8Array()).toEqual(
+            new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+          );
+          expect(new Encoder().int56BE(-36028797018963968n).toUint8Array()).toEqual(
+            new Uint8Array([0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+          );
+          expect(new Encoder().int56BE(0x1234567890abcdn).length).toBe(7);
+        });
+      });
+
       describe('float16', () => {
         test('float16LE', () => {
           const encoder = new Encoder();
@@ -285,6 +537,20 @@ describe('Encoder', () => {
             new Uint8Array([63, 185, 153, 153, 153, 153, 153, 154]),
           );
           expect(encoder.length).toBe(8);
+        });
+      });
+
+      describe('wrapping', () => {
+        test('wraps unsigned integer writes with DataView semantics', () => {
+          expect(new Encoder().uint8(300).toUint8Array()).toEqual(new Uint8Array([0x2c]));
+          expect(new Encoder().uint32LE(2 ** 32 + 5).toUint8Array()).toEqual(
+            new Uint8Array([0x05, 0x00, 0x00, 0x00]),
+          );
+        });
+
+        test('wraps signed integer writes with DataView semantics', () => {
+          expect(new Encoder().int8(128).toUint8Array()).toEqual(new Uint8Array([0x80]));
+          expect(new Encoder().int16LE(70000).toUint8Array()).toEqual(new Uint8Array([0x70, 0x11]));
         });
       });
     });
@@ -572,6 +838,14 @@ describe('Encoder', () => {
         const a: any = { a: null };
         a.a = a;
         expect(() => new Encoder().json(a).toUint8Array()).toThrow();
+      });
+
+      test('value that JSON.stringify cannot represent', () => {
+        const encoder = new Encoder();
+        expect(() => encoder.json(undefined)).toThrow(
+          'Cannot encode value: JSON.stringify returned undefined.',
+        );
+        expect(encoder.length).toBe(0);
       });
     });
 

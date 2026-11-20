@@ -81,8 +81,8 @@ describe('convertBytesToBinaryQuotedPrintableString', () => {
       expect(convert('a b\tc')).toBe('a b\tc');
     });
 
-    test('not encoded if last', () => {
-      expect(convert('ab\t')).toBe('ab\t');
+    test('encoded if last (RFC 2045 rule #3: no raw trailing white space)', () => {
+      expect(convert('ab\t')).toBe('ab=09');
     });
 
     test('encoded if followed by a line break', () => {
@@ -96,7 +96,7 @@ describe('convertBytesToBinaryQuotedPrintableString', () => {
     test('only the last one of the line is encoded and involves a soft line break', () => {
       expect(convert(' '.repeat(80))).toBe(
         '                                                                           =\r\n' +
-          '     ',
+          '    =20',
       );
     });
   });

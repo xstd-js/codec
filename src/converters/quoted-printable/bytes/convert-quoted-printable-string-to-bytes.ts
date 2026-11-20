@@ -6,7 +6,7 @@ import { removeQuotedPrintableTrailingWhiteSpaces } from './helpers.private/remo
 
 /**
  * Reads `length` chars represented as _quoted-printable_ format from `input`,
- * decodes them into the corresponding bytes, and writes the result into `output`.`
+ * decodes them into the corresponding bytes, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
@@ -32,7 +32,7 @@ export function convertQuotedPrintableStringToBytes<GOutput extends Encoder>(
 
     if (byte === 0x3d /* = */) {
       if (remaining() < 2) {
-        quotedPrintableError('found an equal sign without without two following characters.');
+        quotedPrintableError('found an equal sign without two following characters.');
       }
 
       const a: number = input.uint8();
@@ -53,8 +53,8 @@ export function convertQuotedPrintableStringToBytes<GOutput extends Encoder>(
 
       outputLength = removeQuotedPrintableTrailingWhiteSpaces(outputBytes, outputLength);
 
-      outputBytes[outputLength++] = 0x0d /* \r */;
-      outputBytes[outputLength++] = 0x0a /* \n */;
+      outputBytes[outputLength++] = 0x0d; /* \r */
+      outputBytes[outputLength++] = 0x0a; /* \n */
     } else {
       outputBytes[outputLength++] = byte;
     }

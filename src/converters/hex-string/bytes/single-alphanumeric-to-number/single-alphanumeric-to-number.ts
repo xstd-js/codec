@@ -1,7 +1,7 @@
 export type AlphanumericMustBeUpperCase = 'yes' | 'no' | 'either';
 
 /**
- * Converts an alphanumeric char (0-9a-fA-F) into its number counterpart (0-16).
+ * Converts an alphanumeric char (0-9a-fA-F) into its number counterpart (0-15).
  */
 export function singleAlphanumericToNumber(
   byte: number,
@@ -13,12 +13,12 @@ export function singleAlphanumericToNumber(
     if (uppercase === 'no') {
       throw new Error('Expected lowercase alpha char');
     }
-    return byte - 0x37 /* - 0x41 + 0x0a */;
+    return byte - 0x37; /* - 0x41 + 0x0a */
   } else if (0x61 /* a */ <= byte && byte <= 0x66 /* f */) {
     if (uppercase === 'yes') {
       throw new Error('Expected uppercase alpha char');
     }
-    return byte - 0x57 /* - 0x61 + 0x0a*/;
+    return byte - 0x57; /* - 0x61 + 0x0a*/
   } else {
     throw new Error(`Not an alpha character`);
   }

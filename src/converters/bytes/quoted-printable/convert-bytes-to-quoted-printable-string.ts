@@ -4,17 +4,24 @@ import { convertBytesToBinaryQuotedPrintableString } from './convert-bytes-to-bi
 import { convertBytesToTextQuotedPrintableString } from './convert-bytes-to-text-quoted-printable-string/convert-bytes-to-text-quoted-printable-string.js';
 
 export interface ConvertBytesToQuotedPrintableStringOptions {
+  /**
+   * The quoted-printable flavour: `'text'` (default) preserves meaningful
+   * line breaks and only encodes unsafe chars, `'binary'` encodes every byte
+   * as `=XX` (opaque binary data).
+   *
+   * @default 'text'
+   */
   readonly mode?: 'text' | 'binary';
 }
 
 /**
  * Reads `length` bytes from `input`,
- * encodes them in _quoted-printable_ format, and writes the result into `output`.`
+ * encodes them in _quoted-printable_ format, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
- * @param {number} [length] The length of the bytes to read and convert to base64 chars.
- * @param {ConvertBytesToBase64StringOptions} [options]
+ * @param {number} [length] The length of the bytes to read and convert to quoted-printable chars.
+ * @param {ConvertBytesToQuotedPrintableStringOptions} [options] The conversion options.
  * @returns {Encoder} The `output` Encoder with the encoded bytes.
  */
 export function convertBytesToQuotedPrintableString<GOutput extends Encoder>(
