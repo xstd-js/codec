@@ -161,11 +161,12 @@ export class Encoder {
   /*
      INFO: All the following methods return `this`, enabling us to chain them.
      INFO: Each _write_ moves the `cursor` and grows the encoded bytes.
-     INFO: Numeric writes are atomic: if the size limit is reached, the write
-           throws before moving the cursor, leaving `length` unchanged.
-     INFO: `string({ encoding: 'binary' })` validates characters while writing:
-           if it throws, the bytes written so far are left in an unspecified
-           state: discard the Encoder instance rather than reusing it.
+     INFO: All writes are atomic — if the size limit is reached, the write
+           throws before moving the cursor, leaving `length` unchanged —
+           except `string({ encoding: 'binary' })`, which validates characters
+           while writing: if it throws, the bytes written so far are left in
+           an unspecified state: discard the Encoder instance rather than
+           reusing it.
    */
 
   /**

@@ -26,7 +26,7 @@ describe('Decoder', () => {
           Decoder.decode(new Uint8Array([1, 2]), (decoder: Decoder): number => {
             return decoder.uint8();
           }),
-        ).toThrow();
+        ).toThrow('1 bytes remaining.');
       });
     });
 
@@ -64,6 +64,13 @@ describe('Decoder', () => {
       expect(decoder.consumed).toBe(1);
       expect(decoder.remaining).toBe(0);
       expect(decoder.done).toBe(true);
+    });
+
+    test('size limit reached mid multi-byte read leaves the cursor untouched', () => {
+      const decoder = new Decoder(new Uint8Array([1, 2]));
+      expect(() => decoder.uint24LE()).toThrow('Size limit reached.');
+      expect(decoder.consumed).toBe(0);
+      expect(decoder.remaining).toBe(2);
     });
 
     describe('numbers', () => {
@@ -456,6 +463,16 @@ describe('Decoder', () => {
         expect(view).toEqual(new Uint8Array([1, 2]));
         view[0] = 9;
         expect(bytes[0]).toBe(9);
+      });
+
+      test('handles subarray-sourced bytes (byteOffset)', () => {
+        const source = new Uint8Array([9, 1, 2, 3]);
+        const decoder = new Decoder(source.subarray(1));
+        decoder.uint16LE();
+        const view = decoder.toUint8Array();
+        expect(view).toEqual(new Uint8Array([1, 2]));
+        view[0] = 8;
+        expect(source[1]).toBe(8);
       });
     });
 
