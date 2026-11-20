@@ -22,6 +22,11 @@ yarn add @xstd/codec
 npm install @xstd/codec --save
 ```
 
+## ✅ Requirements
+
+Engines with native `DataView.getFloat16`/`setFloat16`:
+Chrome/Edge ≥ 135, Safari ≥ 18.2, Firefox ≥ 134, Node.js ≥ 24.
+
 ## 📜 Documentation
 
 TODO
