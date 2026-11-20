@@ -57,8 +57,6 @@ export function convertBytesToBase64String<GOutput extends Encoder>(
   if (inputRemainingLength === 1) {
     const byte: number = input.uint8();
 
-    // NOTE: if byte <= 0b00111111 AND omitPadding === true, should we add only 1 character ?.
-
     output.uint8(ALPHABET[(byte >> 2) & 0x3f]);
     output.uint8(ALPHABET[(byte << 4) & 0x3f]);
 
