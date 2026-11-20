@@ -1,5 +1,6 @@
 import { Decoder } from '../decoder/decoder.js';
 import { set_float_16 } from '../functions.private/f16/set_float_16/set_float_16.js';
+import { computeGrownByteLength } from './encoder.private/compute-grown-byte-length/compute-grown-byte-length.js';
 import { type EncodeFunction } from './types/encode-function.js';
 import { type EncoderStringOptions } from './types/methods/string/encoder-string-options.js';
 
@@ -125,17 +126,7 @@ export class Encoder {
     }
 
     if (newCursor > this.#buffer.byteLength) {
-      this.#buffer.resize(
-        Math.min(
-          this.#buffer.maxByteLength,
-          (1 <<
-            Math.ceil(
-              Math.log2(newCursor) /* number of bytes to store the data */ +
-                0.5 /* adds a "half-byte" of margin */,
-            )) /* round to the upper limit */ >>>
-            0,
-        ),
-      );
+      this.#buffer.resize(computeGrownByteLength(newCursor, this.#buffer.maxByteLength));
     }
 
     this.#cursor = newCursor;
