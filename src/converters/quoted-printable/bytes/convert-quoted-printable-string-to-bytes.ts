@@ -6,7 +6,7 @@ import { removeQuotedPrintableTrailingWhiteSpaces } from './helpers.private/remo
 
 /**
  * Reads `length` chars represented as _quoted-printable_ format from `input`,
- * decodes them into the corresponding bytes, and writes the result into `output`.`
+ * decodes them into the corresponding bytes, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.

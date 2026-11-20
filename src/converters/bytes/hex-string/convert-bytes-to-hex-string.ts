@@ -3,17 +3,22 @@ import { type Encoder } from '../../../encoder/encoder.js';
 import { numberToSingleAlphanumeric } from './number-to-single-alphanumeric/number-to-single-alphanumeric.js';
 
 export interface ConvertBytesToHexStringOptions {
+  /**
+   * Writes uppercase hex digits.
+   *
+   * @default false
+   */
   readonly uppercase?: boolean;
 }
 
 /**
  * Reads `length` bytes from `input`,
- * encodes them in _hex_ format, and writes the result into `output`.`
+ * encodes them in _hex_ format, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
  * @param {number} [length] The length of the bytes to read and convert to hex chars.
- * @param {ConvertBytesToHexStringOptions} [options]
+ * @param {ConvertBytesToHexStringOptions} [options] The conversion options.
  * @returns {Encoder} The `output` Encoder with the encoded bytes.
  */
 export function convertBytesToHexString<GOutput extends Encoder>(

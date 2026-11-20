@@ -6,18 +6,29 @@ import { BASE64_REVERSE_INVALID } from './constants.private/base64-reverse-inval
 import { BASE64_REVERSE_URL_ALPHABET } from './constants.private/base64-reverse-url-alphabet.js';
 
 export interface ConvertBase64StringToBytesOptions {
+  /**
+   * The alphabet used to decode the chars.
+   *
+   * @default 'base64'
+   */
   readonly alphabet?: 'base64' | 'base64url';
+
+  /**
+   * Expects a base64 string without its trailing `=` padding characters.
+   *
+   * @default false
+   */
   readonly omitPadding?: boolean;
 }
 
 /**
  * Reads `length` chars represented as _base64_ format from `input`,
- * decodes them into the corresponding bytes, and writes the result into `output`.`
+ * decodes them into the corresponding bytes, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
  * @param {number} [length] The length of the chars to read and convert to bytes.
- * @param {ConvertBase64StringToBytesOptions} [options]
+ * @param {ConvertBase64StringToBytesOptions} [options] The conversion options.
  * @returns {Encoder} The `output` Encoder with the decoded bytes.
  */
 export function convertBase64StringToBytes<GOutput extends Encoder>(

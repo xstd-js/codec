@@ -37,7 +37,7 @@ export class Decoder {
   }
 
   /**
-   * Decodes a `string`.
+   * Decodes a `string` from bytes.
    */
   static string(bytes: Uint8Array, options?: DecoderStringOptions): string {
     return this.decode<string>(bytes, (decoder: Decoder): string => {
@@ -46,7 +46,7 @@ export class Decoder {
   }
 
   /**
-   * Decodes a `json` value.
+   * Decodes a `json` value from its `JSON.stringify(...)` representation (UTF-8 bytes).
    */
   static json<GValue>(
     bytes: Uint8Array,
@@ -180,7 +180,7 @@ export class Decoder {
   }
 
   /**
-   * Reads an `int8` from this Decoder, and moves the cursor of 1 byte for the next _read_
+   * Reads an `int8` from this Decoder.
    */
   int8(): number {
     return this.#view.getInt8(this.#consume(1));
@@ -256,10 +256,16 @@ export class Decoder {
     return this.#view.getInt32(this.#consume(4), littleEndian);
   }
 
+  /**
+   * Reads an `int32` represented as _little-endian_ from this Decoder.
+   */
   int32LE(): number {
     return this.#int32(true);
   }
 
+  /**
+   * Reads an `int32` represented as _big-endian_ from this Decoder.
+   */
   int32BE(): number {
     return this.#int32(false);
   }
@@ -322,14 +328,23 @@ export class Decoder {
     return this.#view.getBigInt64(this.#consume(8), littleEndian);
   }
 
+  /**
+   * Reads an `int64` represented as _little-endian_ from this Decoder.
+   */
   int64LE(): bigint {
     return this.#int64(true);
   }
 
+  /**
+   * Reads an `int64` represented as _big-endian_ from this Decoder.
+   */
   int64BE(): bigint {
     return this.#int64(false);
   }
 
+  /**
+   * Reads a `uint8` from this Decoder.
+   */
   uint8(): number {
     return this.#view.getUint8(this.#consume(1));
   }
@@ -338,10 +353,16 @@ export class Decoder {
     return this.#view.getUint16(this.#consume(2), littleEndian);
   }
 
+  /**
+   * Reads a `uint16` represented as _little-endian_ from this Decoder.
+   */
   uint16LE(): number {
     return this.#uint16(true);
   }
 
+  /**
+   * Reads a `uint16` represented as _big-endian_ from this Decoder.
+   */
   uint16BE(): number {
     return this.#uint16(false);
   }
@@ -368,10 +389,16 @@ export class Decoder {
     return this.#view.getUint32(this.#consume(4), littleEndian);
   }
 
+  /**
+   * Reads a `uint32` represented as _little-endian_ from this Decoder.
+   */
   uint32LE(): number {
     return this.#uint32(true);
   }
 
+  /**
+   * Reads a `uint32` represented as _big-endian_ from this Decoder.
+   */
   uint32BE(): number {
     return this.#uint32(false);
   }
@@ -434,10 +461,16 @@ export class Decoder {
     return this.#view.getBigUint64(this.#consume(8), littleEndian);
   }
 
+  /**
+   * Reads a `uint64` represented as _little-endian_ from this Decoder.
+   */
   uint64LE(): bigint {
     return this.#uint64(true);
   }
 
+  /**
+   * Reads a `uint64` represented as _big-endian_ from this Decoder.
+   */
   uint64BE(): bigint {
     return this.#uint64(false);
   }
@@ -446,10 +479,16 @@ export class Decoder {
     return this.#view.getFloat16(this.#consume(2), littleEndian);
   }
 
+  /**
+   * Reads a `float16` represented as _little-endian_ from this Decoder.
+   */
   float16LE(): number {
     return this.#float16(true);
   }
 
+  /**
+   * Reads a `float16` represented as _big-endian_ from this Decoder.
+   */
   float16BE(): number {
     return this.#float16(false);
   }
@@ -458,10 +497,16 @@ export class Decoder {
     return this.#view.getFloat32(this.#consume(4), littleEndian);
   }
 
+  /**
+   * Reads a `float32` represented as _little-endian_ from this Decoder.
+   */
   float32LE(): number {
     return this.#float32(true);
   }
 
+  /**
+   * Reads a `float32` represented as _big-endian_ from this Decoder.
+   */
   float32BE(): number {
     return this.#float32(false);
   }
@@ -470,10 +515,16 @@ export class Decoder {
     return this.#view.getFloat64(this.#consume(8), littleEndian);
   }
 
+  /**
+   * Reads a `float64` represented as _little-endian_ from this Decoder.
+   */
   float64LE(): number {
     return this.#float64(true);
   }
 
+  /**
+   * Reads a `float64` represented as _big-endian_ from this Decoder.
+   */
   float64BE(): number {
     return this.#float64(false);
   }

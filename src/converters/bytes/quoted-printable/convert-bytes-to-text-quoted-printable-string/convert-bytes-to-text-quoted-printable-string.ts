@@ -9,7 +9,7 @@ import { QUOTED_PRINTABLE_MAX_LINE_LENGTH } from '../helpers.private/quoted-prin
 
 /**
  * Reads `length` bytes from `input`,
- * encodes them in _quoted-printable_ with a "text" format, and writes the result into `output`.`
+ * encodes them in _quoted-printable_ with a "text" format, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.

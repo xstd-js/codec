@@ -6,17 +6,22 @@ import {
 } from './single-alphanumeric-to-number/single-alphanumeric-to-number.js';
 
 export interface ConvertHexStringToBytesOptions {
+  /**
+   * Whether uppercase hex digits are expected: `'yes'`, `'no'`, or `'either'`.
+   *
+   * @default 'either'
+   */
   readonly uppercase?: AlphanumericMustBeUpperCase;
 }
 
 /**
  * Reads `length` chars represented as _hex_ format from `input`,
- * decodes them into the corresponding bytes, and writes the result into `output`.`
+ * decodes them into the corresponding bytes, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
  * @param {number} [length] The length of the chars to read and convert to bytes.
- * @param {ConvertHexStringToBytesOptions} [options]
+ * @param {ConvertHexStringToBytesOptions} [options] The conversion options.
  * @returns {Encoder} The `output` Encoder with the decoded bytes.
  */
 export function convertHexStringToBytes<GOutput extends Encoder>(

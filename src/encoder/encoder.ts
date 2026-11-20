@@ -72,7 +72,7 @@ export class Encoder {
   }
 
   /**
-   * Encodes a `string`.
+   * Encodes a `string` into bytes.
    */
   static string(value: string, options?: EncoderStringOptions): Uint8Array {
     return this.encode<string>(value, (encoder: Encoder): void => {
@@ -81,7 +81,7 @@ export class Encoder {
   }
 
   /**
-   * Encodes a `json` value.
+   * Encodes a `json` value as its `JSON.stringify(...)` representation, converted to UTF-8 bytes.
    */
   static json(
     value: any,
@@ -167,6 +167,9 @@ export class Encoder {
     return new Uint8Array(this.#buffer, 0, this.#cursor);
   }
 
+  /**
+   * Creates a new `Decoder` from the bytes encoded so far in this Encoder.
+   */
   toDecoder(): Decoder {
     return new Decoder(this.toUint8Array());
   }
@@ -194,7 +197,7 @@ export class Encoder {
    * ```ts
    * function encodeBinaryString(encoder: Encoder, input: string): void {
    *   encoder
-   *     .int16LE(input)
+   *     .int16LE(input.length) // encodes the string's length
    *     .string(input, { encoding: 'binary' });
    * }
    *
@@ -210,7 +213,7 @@ export class Encoder {
   }
 
   /**
-   * Writes an `int8` in this Encoder, and moves the cursor of 1 byte for the next _write_
+   * Writes an `int8` in this Encoder.
    */
   int8(value: number): this {
     this.#view.setInt8(this.#alloc(1), value);
@@ -273,10 +276,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes an `int32` represented as _little-endian_ in this Encoder.
+   */
   int32LE(value: number): this {
     return this.#int32(value, true);
   }
 
+  /**
+   * Writes an `int32` represented as _big-endian_ in this Encoder.
+   */
   int32BE(value: number): this {
     return this.#int32(value, false);
   }
@@ -347,14 +356,23 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes an `int64` represented as _little-endian_ in this Encoder.
+   */
   int64LE(value: bigint | number): this {
     return this.#int64(value, true);
   }
 
+  /**
+   * Writes an `int64` represented as _big-endian_ in this Encoder.
+   */
   int64BE(value: bigint | number): this {
     return this.#int64(value, false);
   }
 
+  /**
+   * Writes a `uint8` in this Encoder.
+   */
   uint8(value: number): this {
     this.#view.setUint8(this.#alloc(1), value);
     return this;
@@ -365,10 +383,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `uint16` represented as _little-endian_ in this Encoder.
+   */
   uint16LE(value: number): this {
     return this.#uint16(value, true);
   }
 
+  /**
+   * Writes a `uint16` represented as _big-endian_ in this Encoder.
+   */
   uint16BE(value: number): this {
     return this.#uint16(value, false);
   }
@@ -397,10 +421,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `uint32` represented as _little-endian_ in this Encoder.
+   */
   uint32LE(value: number): this {
     return this.#uint32(value, true);
   }
 
+  /**
+   * Writes a `uint32` represented as _big-endian_ in this Encoder.
+   */
   uint32BE(value: number): this {
     return this.#uint32(value, false);
   }
@@ -471,10 +501,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `uint64` represented as _little-endian_ in this Encoder.
+   */
   uint64LE(value: bigint | number): this {
     return this.#uint64(value, true);
   }
 
+  /**
+   * Writes a `uint64` represented as _big-endian_ in this Encoder.
+   */
   uint64BE(value: bigint | number): this {
     return this.#uint64(value, false);
   }
@@ -484,10 +520,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `float16` represented as _little-endian_ in this Encoder.
+   */
   float16LE(value: number): this {
     return this.#float16(value, true);
   }
 
+  /**
+   * Writes a `float16` represented as _big-endian_ in this Encoder.
+   */
   float16BE(value: number): this {
     return this.#float16(value, false);
   }
@@ -497,10 +539,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `float32` represented as _little-endian_ in this Encoder.
+   */
   float32LE(value: number): this {
     return this.#float32(value, true);
   }
 
+  /**
+   * Writes a `float32` represented as _big-endian_ in this Encoder.
+   */
   float32BE(value: number): this {
     return this.#float32(value, false);
   }
@@ -510,10 +558,16 @@ export class Encoder {
     return this;
   }
 
+  /**
+   * Writes a `float64` represented as _little-endian_ in this Encoder.
+   */
   float64LE(value: number): this {
     return this.#float64(value, true);
   }
 
+  /**
+   * Writes a `float64` represented as _big-endian_ in this Encoder.
+   */
   float64BE(value: number): this {
     return this.#float64(value, false);
   }

@@ -6,7 +6,7 @@ import { QUOTED_PRINTABLE_MAX_LINE_LENGTH_MINUS_FOUR } from '../helpers.private/
 
 /**
  * Reads `length` bytes from `input`,
- * encodes them in _quoted-printable_ with a "binary" format, and writes the result into `output`.`
+ * encodes them in _quoted-printable_ with a "binary" format, and writes the result into `output`.
  *
  * @param {Decoder} input The `Decoder` to read from.
  * @param {Encoder} output The `Encoder` to write into.
