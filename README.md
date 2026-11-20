@@ -117,11 +117,13 @@ import {
 
 const base64: string = 'SGVsbG8=';
 
-const input: Decoder = new Encoder().string(base64).toDecoder(); // base64 chars as bytes
-const bytes: Encoder = convertBase64StringToBytes(input, new Encoder()); // -> raw bytes
-const output: Encoder = convertBytesToQuotedPrintableString(bytes.toDecoder(), new Encoder()); // -> quoted-printable chars
-
-const quotedPrintable: string = Decoder.string(output.toUint8Array(), { encoding: 'binary' });
+const quotedPrintable: string = Decoder.string(
+  convertBytesToQuotedPrintableString(
+    convertBase64StringToBytes(new Encoder().string(base64).toDecoder(), new Encoder()).toDecoder(),
+    new Encoder(),
+  ).toUint8Array(),
+  { encoding: 'binary' },
+);
 ```
 
 ### Contracts
