@@ -429,6 +429,9 @@ export class Decoder {
   /**
    * Reads an `Uint8Array` from this Decoder.
    *
+   * > **INFO:** the returned array is a live subarray of the source bytes:
+   * mutations are visible on both sides.
+   *
    * @param {number} [length] The length of the bytes to read.
    * @returns {Uint8Array} The read bytes.
    */

@@ -142,6 +142,10 @@ export class Encoder {
 
   /**
    * Returns an `Uint8Array` containing the encoded values.
+   *
+   * > **INFO:** the returned array is a zero-copy view over this Encoder's
+   * internal buffer: mutating it mutates the Encoder state, and it retains
+   * the whole backing buffer even after the Encoder is discarded.
    */
   toUint8Array(): Uint8Array {
     return new Uint8Array(this.#buffer, 0, this.#cursor);
