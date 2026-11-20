@@ -72,6 +72,16 @@ describe('set_float_16', () => {
     expect(dataView.getUint8(1)).toBe(0xfc);
   });
 
+  it('should encode values larger than the largest float16 as positive infinity', () => {
+    const buffer = new ArrayBuffer(2);
+    const dataView = new DataView(buffer);
+
+    set_float_16(dataView, 0, 1e10, false);
+
+    // overflow -> +Infinity (0x7c00), not a NaN pattern
+    expect(dataView.getUint16(0, false)).toBe(0x7c00);
+  });
+
   it('should correctly handle values smaller than the smallest subnormal float16', () => {
     const buffer = new ArrayBuffer(2);
     const dataView = new DataView(buffer);
@@ -88,8 +98,9 @@ describe('set_float_16', () => {
 
     set_float_16(dataView, 0, 1e10, false);
 
-    expect(dataView.getUint8(0)).toBe(0x00);
-    expect(dataView.getUint8(1)).toBe(0x7e);
+    // +Infinity bits 0x7c00 -> big-endian bytes [0x7c, 0x00]
+    expect(dataView.getUint8(0)).toBe(0x7c);
+    expect(dataView.getUint8(1)).toBe(0x00);
   });
 
   it('should encode the subnormal 2^-15 as 0x0200 (mantissa 512)', () => {

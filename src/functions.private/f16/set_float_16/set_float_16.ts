@@ -29,8 +29,9 @@ export function set_float_16(
       low = 0x00;
       high = 0x00;
     } else if (exponent > 30) {
-      low = (sign << 7) | 0x7c | (exponent === 143 ? 0 : 2);
-      high = 0x00;
+      // -> overflow: ±Infinity (bits 0x7c00 / 0xfc00)
+      low = 0x00;
+      high = (sign << 7) | 0x7c;
     } else {
       if (exponent <= 0) {
         mantissa = (mantissa | 0x0400 /* implicit bit: 0x800000 >> 13 */) >> (1 - exponent);
